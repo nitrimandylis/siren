@@ -78,6 +78,8 @@ flowchart LR
 
 **Stack:** bun · typescript · github actions · ntfy.sh — no dependencies, the site's own embedded JSON does all the work
 
+**Credits:** the `bookingData` trick comes from [johneliades/village_crawler](https://github.com/johneliades/village_crawler), which mapped out the Village booking page's embedded JSON first.
+
 ---
 
 <div align="center">
