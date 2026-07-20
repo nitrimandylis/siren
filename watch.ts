@@ -1,47 +1,81 @@
-// Watches Village Cinemas for THE ODYSSEY IMAX showtimes on/after CUTOFF
-// at The Mall Athens, and pings ntfy.sh when they appear.
+// Watches Village Cinemas for showtimes matching the entries in watches.json
+// and pings ntfy.sh for every watch that has matches. Silence a watch by
+// deleting its entry (or disable the workflow).
+
+import watches from "./watches.json";
 
 const PAGE_URL = "https://www.villagecinemas.gr/en/tickets/film-choice";
-const CUTOFF = "2026-07-30";
-const CINEMA_ID = "21"; // Maroussi - The Mall Athens, the only IMAX location
 const USER_AGENT =
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36";
 
-// Extracts the bookingData JSON from the page and returns the qualifying
-// showtimes as human-readable strings, e.g. "2026-07-30 21:30 IMAX 7".
-export function findImaxDrops(html: string): string[] {
+const CINEMAS: Record<string, string> = {
+  "01": "Rentis",
+  "03": "Pagrati",
+  "21": "The Mall Athens",
+  "22": "Thessaloniki",
+  "23": "Volos",
+  "26": "Athens Metro Mall",
+  "30": "Larissa",
+};
+
+export type Watch = {
+  title: string; // case-insensitive substring of the movie title
+  imax?: boolean; // only IMAX / IMAX 3D screens
+  cinema?: string; // cinema id, e.g. "21" for The Mall Athens
+  from?: string; // only showtimes on/after this date, "YYYY-MM-DD"
+};
+
+export function parseBookingData(html: string) {
   const match = html.match(/var bookingData = (\{[\s\S]*?)<\/script>/);
   if (match === null) {
     throw new Error("bookingData not found on page — layout may have changed");
   }
-  const data = JSON.parse(match[1]);
+  return JSON.parse(match[1]);
+}
 
-  const odysseyIds = new Set<string>();
+// Returns the showtimes matching a watch, e.g. "2026-12-18 21:30 IMAX 7 @ The Mall Athens".
+// Empty array means the movie isn't listed yet or nothing passes the filters.
+export function matchShowtimes(data: any, watch: Watch): string[] {
+  const wanted = watch.title.toUpperCase();
+  const movieIds = new Set<string>();
   for (const record of data.records) {
-    if (record.title.toUpperCase().includes("ODYSSEY")) {
-      odysseyIds.add(record.movieId);
+    if (record.title.toUpperCase().includes(wanted)) {
+      movieIds.add(record.movieId);
     }
-  }
-  if (odysseyIds.size === 0) {
-    throw new Error("THE ODYSSEY not in listings — title may have changed");
   }
 
-  const hits: string[] = [];
+  const lines: string[] = [];
   for (const screen of data.screens) {
-    const isImax = screen.isImax || screen.isImax3D;
-    const date = screen.showtime.slice(0, 10); // "2026-07-30" from "2026-07-30T21:30:00"
-    if (
-      odysseyIds.has(screen.scheduledFilmId) &&
-      screen.cinemaId === CINEMA_ID &&
-      isImax &&
-      date >= CUTOFF
-    ) {
-      const time = screen.showtime.slice(11, 16);
-      const soldout = screen.soldoutStatus ? " (soldout)" : "";
-      hits.push(`${date} ${time} ${screen.screenName}${soldout}`);
-    }
+    if (!movieIds.has(screen.scheduledFilmId)) continue;
+    if (watch.imax && !(screen.isImax || screen.isImax3D)) continue;
+    if (watch.cinema && screen.cinemaId !== watch.cinema) continue;
+    const date = screen.showtime.slice(0, 10);
+    if (watch.from && date < watch.from) continue;
+    const time = screen.showtime.slice(11, 16);
+    const cinema = CINEMAS[screen.cinemaId] ?? `cinema ${screen.cinemaId}`;
+    lines.push(`${date} ${time} ${screen.screenName} @ ${cinema}`);
   }
-  return hits.sort();
+  return lines.sort();
+}
+
+async function ping(topic: string, watch: Watch, lines: string[]) {
+  const shown = lines.slice(0, 25);
+  if (lines.length > shown.length) {
+    shown.push(`...and ${lines.length - shown.length} more`);
+  }
+  const response = await fetch(`https://ntfy.sh/${topic}`, {
+    method: "POST",
+    headers: {
+      Title: `${watch.title} tickets are UP`,
+      Priority: "urgent",
+      Tags: "rotating_light",
+      Click: PAGE_URL,
+    },
+    body: shown.join("\n"),
+  });
+  if (!response.ok) {
+    throw new Error(`ntfy returned HTTP ${response.status}`);
+  }
 }
 
 async function main() {
@@ -49,31 +83,21 @@ async function main() {
   if (!response.ok) {
     throw new Error(`Village Cinemas returned HTTP ${response.status}`);
   }
-  const hits = findImaxDrops(await response.text());
+  const data = parseBookingData(await response.text());
 
-  if (hits.length === 0) {
-    console.log(`No IMAX showtimes on/after ${CUTOFF} yet.`);
-    return;
+  for (const watch of watches as Watch[]) {
+    const lines = matchShowtimes(data, watch);
+    if (lines.length === 0) {
+      console.log(`${watch.title}: nothing yet`);
+      continue;
+    }
+    const topic = process.env.NTFY_TOPIC;
+    if (!topic) {
+      throw new Error("NTFY_TOPIC is not set");
+    }
+    await ping(topic, watch, lines);
+    console.log(`${watch.title}: ALERT sent (${lines.length} showtimes)`);
   }
-
-  const topic = process.env.NTFY_TOPIC;
-  if (!topic) {
-    throw new Error("NTFY_TOPIC is not set");
-  }
-  const ping = await fetch(`https://ntfy.sh/${topic}`, {
-    method: "POST",
-    headers: {
-      Title: "ODYSSEY IMAX 30/07+ tickets are UP",
-      Priority: "urgent",
-      Tags: "rotating_light",
-      Click: PAGE_URL,
-    },
-    body: hits.join("\n"),
-  });
-  if (!ping.ok) {
-    throw new Error(`ntfy returned HTTP ${ping.status}`);
-  }
-  console.log("ALERT sent:\n" + hits.join("\n"));
 }
 
 if (import.meta.main) {

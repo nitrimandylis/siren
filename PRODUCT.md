@@ -1,16 +1,22 @@
 # imax-ping
 
-Watcher that pings my phone when THE ODYSSEY IMAX showtimes on/after 30/07/2026
-appear at Village Cinemas, The Mall Athens (the only IMAX location in Greece).
+Watcher that pings my phone the moment Village Cinemas (Greece) opens booking
+for movies I'm hunting tickets for — built for hype releases where IMAX sells
+out in hours (proved itself on THE ODYSSEY, now aimed at Avengers and Dune 3).
 
-- `watch.ts` — fetches the Village Cinemas film-choice page, parses the embedded
-  `bookingData` JSON, filters for IMAX Odyssey showtimes ≥ 30/07 at cinema 21,
-  and POSTs an urgent push to ntfy.sh if any exist.
+- `watches.json` — the hunt list. Each entry: `title` (substring match),
+  optional `imax`, `cinema` (id), `from` (YYYY-MM-DD).
+- `watch.ts` — fetches the Village film-choice page, parses the embedded
+  `bookingData` JSON, and sends an urgent ntfy.sh push for every watch with
+  matching showtimes.
 - `.github/workflows/watch.yml` — runs it every ~5 min via GitHub Actions cron.
-- Repeats the ping every cycle until the workflow is disabled (alarm, not log).
+- No state: a triggered watch pings every cycle until you delete its entry
+  from `watches.json`. It's an alarm, not a log.
 
-Needs `NTFY_TOPIC` as a GitHub Actions secret. Single-purpose and disposable:
-once the tickets are booked, disable the workflow.
+Needs `NTFY_TOPIC` as a GitHub Actions secret.
 
-Status (20/07/2026): the target dates dropped the day this was built — 30/07
-through 05/08 went live while the watcher was being written.
+Cinema ids: 01 Rentis, 03 Pagrati, 21 The Mall Athens (the only IMAX),
+22 Thessaloniki, 23 Volos, 26 Athens Metro Mall, 30 Larissa.
+
+History: built 20/07/2026 for THE ODYSSEY IMAX — the 30/07+ dates dropped
+while the first version was being written, tickets secured same day.
