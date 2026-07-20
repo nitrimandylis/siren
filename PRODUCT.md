@@ -1,4 +1,4 @@
-# imax-ping
+# siren
 
 Watcher that pings my phone the moment Village Cinemas (Greece) opens booking
 for movies I'm hunting tickets for — built for hype releases where IMAX sells

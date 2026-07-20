@@ -1,16 +1,10 @@
 ```
- ██╗███╗   ███╗ █████╗ ██╗  ██╗
- ██║████╗ ████║██╔══██╗╚██╗██╔╝
- ██║██╔████╔██║███████║ ╚███╔╝
- ██║██║╚██╔╝██║██╔══██║ ██╔██╗
- ██║██║ ╚═╝ ██║██║  ██║██╔╝ ██╗
- ╚═╝╚═╝     ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝
- ██████╗ ██╗███╗   ██╗ ██████╗
- ██╔══██╗██║████╗  ██║██╔════╝
- ██████╔╝██║██╔██╗ ██║██║  ███╗
- ██╔═══╝ ██║██║╚██╗██║██║   ██║
- ██║     ██║██║ ╚████║╚██████╔╝
- ╚═╝     ╚═╝╚═╝  ╚═══╝ ╚═════╝
+ ███████╗██╗██████╗ ███████╗███╗   ██╗
+ ██╔════╝██║██╔══██╗██╔════╝████╗  ██║
+ ███████╗██║██████╔╝█████╗  ██╔██╗ ██║
+ ╚════██║██║██╔══██╗██╔══╝  ██║╚██╗██║
+ ███████║██║██║  ██║███████╗██║ ╚████║
+ ╚══════╝╚═╝╚═╝  ╚═╝╚══════╝╚═╝  ╚═══╝
 ```
 
 <div align="center">
@@ -34,7 +28,7 @@ There is no database and no state. A triggered watch alarms again every five min
 Built for THE ODYSSEY in IMAX. The 30/07 dates dropped while the first version was still being written (tickets secured, watcher instantly obsolete, repo repurposed the same week).
 
 ```console
-nick@imax-ping:~$ bun watch.ts
+nick@siren:~$ bun watch.ts
 AVENGERS: nothing yet
 DUNE: nothing yet
 [i] the machine waits so you can sleep.
@@ -56,8 +50,8 @@ Each entry in `watches.json` is one movie you refuse to miss:
 Fork it, then:
 
 ```bash
-git clone https://github.com/nitrimandylis/imax-ping.git
-cd imax-ping
+git clone https://github.com/nitrimandylis/siren.git
+cd siren
 bun test          # 5 tests on the parser and filters
 bun watch.ts      # one manual poll, needs NTFY_TOPIC to actually ping
 ```
