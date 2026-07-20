@@ -1,4 +1,14 @@
 [
-  { "title": "AVENGERS", "imax": true },
-  { "title": "DUNE", "imax": true }
+  {
+    "title": "AVENGERS",
+    "imax": true
+  },
+  {
+    "title": "DUNE",
+    "imax": true
+  },
+  {
+    "title": "CINE SELFTEST",
+    "imax": true
+  }
 ]
