@@ -31,7 +31,7 @@ AVENGERS: nothing yet
 DUNE: nothing yet
 
 nick@siren:~$ bun repos/sync.ts
-2 added, 3 refreshed
+2 added, 3 refreshed, 2 readmes
 [i] the machine asks so you don't have to.
 ```
 
@@ -58,6 +58,10 @@ A projects database is only useful while it is true. This one diffs GitHub again
 
 `Category` is left blank on new rows deliberately. It is the one field an API cannot guess, and an empty cell is a better reminder than a wrong guess. Idea-stage rows with no repo id are never touched.
 
+The repo's README becomes the page body, so the database reads as a portfolio instead of a table of links. Notion's API takes block objects rather than markdown, so `repos/markdown.ts` converts the constructs a README actually uses — headings, lists, quotes, fenced code, inline links and emphasis — and drops badge rows and centering `<div>`s, which carry nothing outside GitHub. Tables survive as code blocks rather than being rebuilt as Notion tables.
+
+A body is only ever written to a page that is **empty**. That backfills old rows, fills new ones, and means anything you write yourself is never overwritten — including on a repo whose README later changes.
+
 This repo is public, so its Actions logs are world-readable — the job prints counts only. The repo names go to your phone, not the log.
 
 ## 🚀 Run it
@@ -65,7 +69,7 @@ This repo is public, so its Actions logs are world-readable — the job prints c
 ```bash
 git clone https://github.com/nitrimandylis/siren.git
 cd siren
-bun test              # 13 tests on the parsers, filters, and diff
+bun test              # 23 tests on the parsers, filters, diff, and markdown
 bun cinema/watch.ts   # one manual poll
 bun repos/sync.ts     # one manual sync
 ```
@@ -95,7 +99,7 @@ flowchart LR
 | push | `ntfy.ts` | the one place `NTFY_TOPIC` is read — every watcher sends through it |
 | watcher | `cinema/`, `repos/` | one folder each, self-contained, no shared state |
 | cron | `.github/workflows/*.yml` | one workflow per watcher, own schedule, offset from `:00` because github delays on-the-hour jobs |
-| tests | `*/*.test.ts` | what actually breaks if a parser or the diff breaks |
+| tests | `*/*.test.ts` | what actually breaks if a parser, the diff, or the markdown breaks |
 
 **Stack:** bun · typescript · github actions · ntfy.sh — no dependencies, the sources' own JSON does all the work
 

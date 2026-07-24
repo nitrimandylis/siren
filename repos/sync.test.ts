@@ -54,10 +54,13 @@ test("dayOf trims an ISO timestamp to a date", () => {
   expect(dayOf("2026-07-20T18:12:41Z")).toBe("2026-07-20");
 });
 
-test("the summary marks additions and refreshes differently", () => {
+test("the summary marks additions, refreshes and filled bodies differently", () => {
   const plan = {
     create: [repo({ id: 1, name: "pitch" })],
     touch: [{ pageId: "p1", name: "cine", pushedOn: "2026-07-21" }],
   };
-  expect(summarize(plan)).toBe("+ pitch (set Category)\n~ cine -> 2026-07-21");
+  expect(summarize(plan, [])).toBe("+ pitch (set Category)\n~ cine -> 2026-07-21");
+  expect(summarize(plan, ["pitch", "jazz"])).toBe(
+    "+ pitch (set Category)\n~ cine -> 2026-07-21\nreadme -> pitch, jazz",
+  );
 });

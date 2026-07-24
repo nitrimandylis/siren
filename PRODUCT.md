@@ -41,6 +41,12 @@ a summary only when something changed.
 empty cell is a visible prompt to make it. Rows with no repo id (idea-stage
 projects) are never touched.
 
+The repo README becomes the page body. `repos/markdown.ts` converts markdown to
+Notion blocks (the API won't take markdown): headings, lists, quotes, fenced
+code, inline links and emphasis. Badge rows and centering `<div>`s are dropped,
+tables survive as code blocks. A body is only written to a page that is empty,
+which backfills old rows and guarantees nothing hand-written is overwritten.
+
 The repo is public, so Actions logs are world-readable: the job logs counts
 only, never repo names. Names go to the phone instead.
 
