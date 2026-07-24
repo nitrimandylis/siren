@@ -39,13 +39,19 @@ a summary only when something changed.
 
 `Category` is left empty on new rows on purpose — it's a judgement call, and an
 empty cell is a visible prompt to make it. Rows with no repo id (idea-stage
-projects) are never touched.
+projects) are never touched. The `nitrimandylis` profile README repo is skipped
+via an `IGNORED` set at the top of `sync.ts` — add to it for anything else on
+GitHub that isn't a project.
 
 The repo README becomes the page body. `repos/markdown.ts` converts markdown to
 Notion blocks (the API won't take markdown): headings, lists, quotes, fenced
 code, inline links and emphasis. Badge rows and centering `<div>`s are dropped,
 tables survive as code blocks. A body is only written to a page that is empty,
 which backfills old rows and guarantees nothing hand-written is overwritten.
+
+Known ceilings: a README over 300 blocks is cut (`MAX_BODY_BLOCKS`), any single
+text run over 2000 characters is truncated, and appends are chunked 100 at a
+time with a 350 ms gap to stay under Notion's ~3 requests/second.
 
 The repo is public, so Actions logs are world-readable: the job logs counts
 only, never repo names. Names go to the phone instead.

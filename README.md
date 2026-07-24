@@ -60,7 +60,7 @@ A projects database is only useful while it is true. This one diffs GitHub again
 
 The repo's README becomes the page body, so the database reads as a portfolio instead of a table of links. Notion's API takes block objects rather than markdown, so `repos/markdown.ts` converts the constructs a README actually uses — headings, lists, quotes, fenced code, inline links and emphasis — and drops badge rows and centering `<div>`s, which carry nothing outside GitHub. Tables survive as code blocks rather than being rebuilt as Notion tables.
 
-A body is only ever written to a page that is **empty**. That backfills old rows, fills new ones, and means anything you write yourself is never overwritten — including on a repo whose README later changes.
+A body is only ever written to a page that is **empty**. That backfills old rows, fills new ones, and means anything you write yourself is never overwritten — including on a repo whose README later changes. Repos that aren't projects (the profile README, for one) go in the `IGNORED` set at the top of `sync.ts`.
 
 This repo is public, so its Actions logs are world-readable — the job prints counts only. The repo names go to your phone, not the log.
 
@@ -98,6 +98,7 @@ flowchart LR
 |---|---|---|
 | push | `ntfy.ts` | the one place `NTFY_TOPIC` is read — every watcher sends through it |
 | watcher | `cinema/`, `repos/` | one folder each, self-contained, no shared state |
+| markdown | `repos/markdown.ts` | markdown → Notion blocks, because the API refuses markdown |
 | cron | `.github/workflows/*.yml` | one workflow per watcher, own schedule, offset from `:00` because github delays on-the-hour jobs |
 | tests | `*/*.test.ts` | what actually breaks if a parser, the diff, or the markdown breaks |
 
