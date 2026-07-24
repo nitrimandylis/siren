@@ -1,0 +1,18 @@
+name: repos
+
+on:
+  schedule:
+    - cron: "17 6 * * *" # daily, offset from :00 — GitHub delays runs most at the top of the hour
+  workflow_dispatch:
+
+jobs:
+  repos:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun repos/sync.ts
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          GH_PAT: ${{ secrets.GH_PAT }}
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}

@@ -2,6 +2,7 @@
 // and pings ntfy.sh for every watch that has matches. Silence a watch by
 // deleting its entry (or disable the workflow).
 
+import { ping } from "../ntfy";
 import watches from "./watches.json";
 
 const PAGE_URL = "https://www.villagecinemas.gr/en/tickets/film-choice";
@@ -58,24 +59,18 @@ export function matchShowtimes(data: any, watch: Watch): string[] {
   return lines.sort();
 }
 
-async function ping(topic: string, watch: Watch, lines: string[]) {
+async function alert(watch: Watch, lines: string[]) {
   const shown = lines.slice(0, 25);
   if (lines.length > shown.length) {
     shown.push(`...and ${lines.length - shown.length} more`);
   }
-  const response = await fetch(`https://ntfy.sh/${topic}`, {
-    method: "POST",
-    headers: {
-      Title: `${watch.title} tickets are UP`,
-      Priority: "urgent",
-      Tags: "rotating_light",
-      Click: PAGE_URL,
-    },
+  await ping({
+    title: `${watch.title} tickets are UP`,
     body: shown.join("\n"),
+    priority: "urgent",
+    tags: "rotating_light",
+    click: PAGE_URL,
   });
-  if (!response.ok) {
-    throw new Error(`ntfy returned HTTP ${response.status}`);
-  }
 }
 
 async function main() {
@@ -91,11 +86,7 @@ async function main() {
       console.log(`${watch.title}: nothing yet`);
       continue;
     }
-    const topic = process.env.NTFY_TOPIC;
-    if (!topic) {
-      throw new Error("NTFY_TOPIC is not set");
-    }
-    await ping(topic, watch, lines);
+    await alert(watch, lines);
     console.log(`${watch.title}: ALERT sent (${lines.length} showtimes)`);
   }
 }

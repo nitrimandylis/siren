@@ -1,4 +1,4 @@
-name: watch
+name: cinema
 
 on:
   schedule:
@@ -11,6 +11,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
-      - run: bun watch.ts
+      - run: bun cinema/watch.ts
         env:
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
