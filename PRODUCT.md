@@ -57,8 +57,10 @@ The repo is public, so Actions logs are world-readable: the job logs counts
 only, never repo names. Names go to the phone instead.
 
 Secrets: `NTFY_TOPIC`, `GH_PAT` (classic token, `repo` scope, so private repos
-are visible), `NOTION_TOKEN` (internal integration with the database shared to
-it).
+are visible), `NOTION_API_KEY` (internal integration with the database shared to
+it). The workflow maps `NOTION_API_KEY` to the `NOTION_TOKEN` env var the script
+reads — GitHub reserves the `GITHUB_` prefix, which is also why the PAT is not
+called `GITHUB_TOKEN`.
 
 ## History
 

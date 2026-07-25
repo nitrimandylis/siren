@@ -80,7 +80,7 @@ To arm it, set these as GitHub Actions secrets:
 |---|---|---|
 | `NTFY_TOPIC` | all | your ntfy topic — pick something unguessable like `odyssey-imax-x7k2f9`, then subscribe to it in the ntfy app |
 | `GH_PAT` | `repos` | classic token with `repo` scope, so private repos are visible |
-| `NOTION_TOKEN` | `repos` | internal integration token, with the database shared to that integration |
+| `NOTION_API_KEY` | `repos` | internal integration token, with the database shared to that integration |
 
 GitHub disables schedules after 60 days without commits — re-enable from the Actions tab when release week nears (polling in July for a December premiere is just cardio for the runner).
 
