@@ -69,7 +69,7 @@ This repo is public, so its Actions logs are world-readable — the job prints c
 ```bash
 git clone https://github.com/nitrimandylis/siren.git
 cd siren
-bun test              # 23 tests on the parsers, filters, diff, and markdown
+bun test              # 29 tests on the parsers, filters, diff, and markdown
 bun cinema/watch.ts   # one manual poll
 bun repos/sync.ts     # one manual sync
 ```
@@ -82,7 +82,7 @@ To arm it, set these as GitHub Actions secrets:
 | `GH_PAT` | `repos` | classic token with `repo` scope, so private repos are visible |
 | `NOTION_API_KEY` | `repos` | internal integration token, with the database shared to that integration |
 
-GitHub disables schedules after 60 days without commits — re-enable from the Actions tab when release week nears (polling in July for a December premiere is just cardio for the runner).
+GitHub disables schedules after 60 days without commits, which is exactly how a watcher armed in July turns out to be dead in December. The `keepalive` workflow pushes an empty commit on the 1st of each month to reset that clock, then pings your current watch list — so the monthly notification is also your only proof the thing is still armed and still hunting what you think it is.
 
 ## 🔩 Under the hood
 
@@ -100,6 +100,7 @@ flowchart LR
 | watcher | `cinema/`, `repos/` | one folder each, self-contained, no shared state |
 | markdown | `repos/markdown.ts` | markdown → Notion blocks, because the API refuses markdown |
 | cron | `.github/workflows/*.yml` | one workflow per watcher, own schedule, offset from `:00` because github delays on-the-hour jobs |
+| keepalive | `keepalive.ts` | monthly empty commit so github never disables the schedules, plus a "still armed" ping |
 | tests | `*/*.test.ts` | what actually breaks if a parser, the diff, or the markdown breaks |
 
 **Stack:** bun · typescript · github actions · ntfy.sh — no dependencies, the sources' own JSON does all the work

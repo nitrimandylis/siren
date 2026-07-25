@@ -69,6 +69,21 @@ it). The workflow maps `NOTION_API_KEY` to the `NOTION_TOKEN` env var the script
 reads — GitHub reserves the `GITHUB_` prefix, which is also why the PAT is not
 called `GITHUB_TOKEN`.
 
+### `keepalive` — monthly heartbeat
+
+Not a watcher. GitHub disables every schedule in a repo after 60 days with no
+repository activity, and workflow runs do not count — so a watcher armed in
+July for a December release quietly disarms itself in September. On the 1st of
+each month this pushes an empty commit (`git commit --allow-empty`, no state
+file, nothing to read) and then pings the current `watches.json` titles. The
+ping runs only after the commit lands, so the push to the phone is proof the
+whole thing worked rather than proof the job started.
+
+Unverified: whether a push made with the built-in `GITHUB_TOKEN` resets the
+60-day clock. If schedules get disabled anyway, check out with `GH_PAT`.
+
+Secrets: `NTFY_TOPIC`.
+
 ## History
 
 Built 20/07/2026 as a single-purpose cinema watcher for THE ODYSSEY IMAX — the
