@@ -31,7 +31,16 @@ export function parseBookingData(html: string) {
   if (match === null) {
     throw new Error("bookingData not found on page — layout may have changed");
   }
-  return JSON.parse(match[1]);
+  const data = JSON.parse(match[1]);
+  // Canary: a renamed field looks exactly like "tickets haven't dropped yet",
+  // so an empty dataset has to fail loudly. The live page always lists films.
+  if (!Array.isArray(data.records) || data.records.length === 0) {
+    throw new Error("bookingData has no records — field names may have changed");
+  }
+  if (!Array.isArray(data.screens) || data.screens.length === 0) {
+    throw new Error("bookingData has no screens — field names may have changed");
+  }
+  return data;
 }
 
 // Returns the showtimes matching a watch, e.g. "2026-12-18 21:30 IMAX 7 @ The Mall Athens".

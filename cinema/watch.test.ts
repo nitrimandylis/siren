@@ -49,3 +49,12 @@ test("parseBookingData extracts the blob and throws when missing", () => {
   expect(parseBookingData(html).records.length).toBe(2);
   expect(() => parseBookingData("<html>nothing</html>")).toThrow("bookingData not found");
 });
+
+test("parseBookingData throws when the fields are renamed away", () => {
+  const renamed = { films: data.records, showings: data.screens };
+  const html = `<html><script>var bookingData = ${JSON.stringify(renamed)}</script></html>`;
+  expect(() => parseBookingData(html)).toThrow("no records");
+
+  const noScreens = `<html><script>var bookingData = ${JSON.stringify({ ...data, screens: [] })}</script></html>`;
+  expect(() => parseBookingData(noScreens)).toThrow("no screens");
+});
