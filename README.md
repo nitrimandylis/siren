@@ -60,7 +60,7 @@ A projects database is only useful while it is true. This one diffs GitHub again
 
 The repo's README becomes the page body, so the database reads as a portfolio instead of a table of links. Notion's API takes block objects rather than markdown, so `repos/markdown.ts` converts the constructs a README actually uses — headings, lists, quotes, fenced code, inline links and emphasis — and drops badge rows and centering `<div>`s, which carry nothing outside GitHub. Tables survive as code blocks rather than being rebuilt as Notion tables.
 
-A body is only ever written to a page that is **empty**. That backfills old rows, fills new ones, and means anything you write yourself is never overwritten — including on a repo whose README later changes. Repos that aren't projects (the profile README, for one) go in the `IGNORED` set at the top of `sync.ts`.
+The body belongs to the sync, not to you. A `README synced` date property records which README commit a body came from; when the README moves, the old body is deleted block by block and rebuilt. A push that never touched the README changes nothing. **Notes typed into one of these pages do not survive the next README commit** — put them in a property, or in the README itself. Repos that aren't projects (the profile README, for one) go in the `IGNORED` set at the top of `sync.ts`.
 
 This repo is public, so its Actions logs are world-readable — the job prints counts only. The repo names go to your phone, not the log.
 

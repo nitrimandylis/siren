@@ -46,12 +46,19 @@ GitHub that isn't a project.
 The repo README becomes the page body. `repos/markdown.ts` converts markdown to
 Notion blocks (the API won't take markdown): headings, lists, quotes, fenced
 code, inline links and emphasis. Badge rows and centering `<div>`s are dropped,
-tables survive as code blocks. A body is only written to a page that is empty,
-which backfills old rows and guarantees nothing hand-written is overwritten.
+tables survive as code blocks.
+
+The body is owned by the sync. The `README synced` date property holds the date
+of the README commit a body was built from; when the README moves, the body is
+deleted block by block and rebuilt, and the property is stamped forward. A push
+that never touched the README rebuilds nothing. Notes typed into one of these
+pages do not survive the next README commit.
 
 Known ceilings: a README over 300 blocks is cut (`MAX_BODY_BLOCKS`), any single
-text run over 2000 characters is truncated, and appends are chunked 100 at a
-time with a 350 ms gap to stay under Notion's ~3 requests/second.
+text run over 2000 characters is truncated, appends are chunked 100 at a time,
+and every Notion write is followed by a 350 ms gap to stay under its ~3
+requests/second. Clearing a page costs one DELETE per block, so a rebuild is
+slow by design — it only happens when a README actually moves.
 
 The repo is public, so Actions logs are world-readable: the job logs counts
 only, never repo names. Names go to the phone instead.

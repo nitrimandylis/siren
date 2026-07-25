@@ -32,6 +32,7 @@ export type Row = {
   name: string;
   repoId: number | null; // rows for idea-stage projects have no repo yet
   lastPushed: string | null; // "YYYY-MM-DD"
+  readmeSynced: string | null; // "YYYY-MM-DD" of the README commit this body came from
 };
 
 export type Plan = {
@@ -82,6 +83,15 @@ export function planSync(repos: Repo[], rows: Row[]): Plan {
     }
   }
   return plan;
+}
+
+// The page body belongs to the sync, not to you: whenever the README moves, the
+// old body is deleted and rebuilt from scratch. Notes typed into one of these
+// pages will not survive the next README commit — put them in a property, or in
+// the README itself.
+export function needsRebuild(row: Row | undefined, readmeChangedOn: string | null): boolean {
+  if (readmeChangedOn === null) return false; // no README, nothing to build from
+  return row?.readmeSynced !== readmeChangedOn;
 }
 
 export function summarize(plan: Plan, filled: string[]): string {
@@ -147,6 +157,7 @@ async function notionRows(token: string): Promise<Row[]> {
         name: properties["Project"].title[0]?.plain_text ?? "(untitled)",
         repoId: properties["GitHub Repo ID"].number,
         lastPushed: properties["Last Pushed"].date?.start ?? null,
+        readmeSynced: properties["README synced"]?.date?.start ?? null,
       });
     }
 
@@ -182,11 +193,41 @@ async function touchRow(token: string, pageId: string, pushedOn: string) {
   });
 }
 
-// Only ever fills a page that has nothing in it, so anything written by hand
-// is safe and a README that changes later doesn't overwrite your notes.
-async function hasBody(token: string, pageId: string): Promise<boolean> {
-  const children = (await notion("GET", `/blocks/${pageId}/children?page_size=1`, token)) as any;
-  return children.results.length > 0;
+// Notion has no "empty this page" call, so a rebuild means deleting every
+// top-level block one at a time. Children go with their parent.
+// ponytail: O(blocks) deletes per rebuild, which only happens when a README
+// actually moves — batch it only if that stops being rare.
+async function clearBody(token: string, pageId: string) {
+  while (true) {
+    const page = (await notion("GET", `/blocks/${pageId}/children?page_size=100`, token)) as any;
+    if (page.results.length === 0) return;
+    for (const block of page.results) {
+      await notion("DELETE", `/blocks/${block.id}`, token);
+      await Bun.sleep(350); // stay under Notion's ~3 requests/second
+    }
+    if (!page.has_more) return;
+  }
+}
+
+// The date of the last commit that touched the README, which is the signal for
+// "this body is out of date" — a push that never touched it changes nothing.
+async function readmeChangedOn(token: string, name: string): Promise<string | null> {
+  const url = `https://api.github.com/repos/${OWNER}/${name}/commits?path=README.md&per_page=1`;
+  const response = await fetch(url, {
+    headers: { Authorization: `Bearer ${token}`, "User-Agent": "siren" },
+  });
+  if (!response.ok) {
+    throw new Error(`GitHub commits returned HTTP ${response.status}`);
+  }
+  const commits = (await response.json()) as any[];
+  if (commits.length === 0) return null;
+  return dayOf(commits[0].commit.committer.date);
+}
+
+async function markSynced(token: string, pageId: string, changedOn: string) {
+  await notion("PATCH", `/pages/${pageId}`, token, {
+    properties: { "README synced": { date: { start: changedOn } } },
+  });
 }
 
 async function readmeFor(token: string, name: string): Promise<string | null> {
@@ -223,9 +264,12 @@ async function main() {
   const [repos, rows] = await Promise.all([githubRepos(ghToken), notionRows(notionToken)]);
   const plan = planSync(repos, rows);
 
+  const rowFor = new Map<number, Row>();
   const pageFor = new Map<number, string>();
   for (const row of rows) {
-    if (row.repoId !== null) pageFor.set(row.repoId, row.pageId);
+    if (row.repoId === null) continue;
+    rowFor.set(row.repoId, row);
+    pageFor.set(row.repoId, row.pageId);
   }
   for (const repo of plan.create) {
     pageFor.set(repo.id, await createRow(notionToken, repo));
@@ -234,20 +278,24 @@ async function main() {
     await touchRow(notionToken, touched.pageId, touched.pushedOn);
   }
 
-  // Fill empty pages with the repo's README: the rows just created, and every
-  // older row that predates this. A page with anything in it is left alone.
+  // Rebuild the body of every page whose README has moved since it was last
+  // synced. New rows have no README synced date, so they always build.
   const filled: string[] = [];
   for (const repo of repos) {
     const pageId = pageFor.get(repo.id);
     if (pageId === undefined) continue;
-    if (await hasBody(notionToken, pageId)) continue;
+
+    const changedOn = await readmeChangedOn(ghToken, repo.name);
+    if (!needsRebuild(rowFor.get(repo.id), changedOn)) continue;
 
     const readme = await readmeFor(ghToken, repo.name);
     if (readme === null) continue;
     const blocks = toBlocks(readme).slice(0, MAX_BODY_BLOCKS);
     if (blocks.length === 0) continue;
 
+    await clearBody(notionToken, pageId);
     await appendBody(notionToken, pageId, blocks);
+    await markSynced(notionToken, pageId, changedOn!);
     filled.push(repo.name);
   }
 

@@ -1,5 +1,9 @@
 import { expect, test } from "bun:test";
-import { dayOf, planSync, stackFor, summarize, type Repo, type Row } from "./sync";
+import { dayOf, needsRebuild, planSync, stackFor, summarize, type Repo, type Row } from "./sync";
+
+function row(overrides: Partial<Row> = {}): Row {
+  return { pageId: "p1", name: "cine", repoId: 1, lastPushed: null, readmeSynced: null, ...overrides };
+}
 
 function repo(overrides: Partial<Repo> & { id: number; name: string }): Repo {
   return {
@@ -19,20 +23,20 @@ test("repos with no row are queued for creation", () => {
 });
 
 test("matching is by repo id, so a renamed repo is not duplicated", () => {
-  const rows: Row[] = [{ pageId: "p1", name: "old-name", repoId: 1, lastPushed: "2026-07-20" }];
+  const rows: Row[] = [row({ name: "old-name", lastPushed: "2026-07-20" })];
   const plan = planSync([repo({ id: 1, name: "new-name" })], rows);
   expect(plan.create).toEqual([]);
   expect(plan.touch).toEqual([]);
 });
 
 test("a stale Last Pushed is queued for a refresh", () => {
-  const rows: Row[] = [{ pageId: "p1", name: "cine", repoId: 1, lastPushed: "2026-07-18" }];
+  const rows: Row[] = [row({ lastPushed: "2026-07-18" })];
   const plan = planSync([repo({ id: 1, name: "cine" })], rows);
   expect(plan.touch).toEqual([{ pageId: "p1", name: "cine", pushedOn: "2026-07-20" }]);
 });
 
 test("idea-stage rows without a repo id are left alone", () => {
-  const rows: Row[] = [{ pageId: "p1", name: "notion-tui", repoId: null, lastPushed: null }];
+  const rows: Row[] = [row({ name: "notion-tui", repoId: null })];
   const plan = planSync([repo({ id: 1, name: "cine" })], rows);
   expect(plan.create.map((r) => r.name)).toEqual(["cine"]);
   expect(plan.touch).toEqual([]);
@@ -63,4 +67,18 @@ test("the summary marks additions, refreshes and filled bodies differently", () 
   expect(summarize(plan, ["pitch", "jazz"])).toBe(
     "+ pitch (set Category)\n~ cine -> 2026-07-21\nreadme -> pitch, jazz",
   );
+});
+
+test("a body rebuilds when the README commit differs from the synced date", () => {
+  expect(needsRebuild(row({ readmeSynced: "2026-06-16" }), "2026-07-13")).toBe(true);
+  expect(needsRebuild(row({ readmeSynced: "2026-07-13" }), "2026-07-13")).toBe(false);
+});
+
+test("a page that has never been synced always rebuilds", () => {
+  expect(needsRebuild(row({ readmeSynced: null }), "2026-07-13")).toBe(true);
+  expect(needsRebuild(undefined, "2026-07-13")).toBe(true); // a row created this run
+});
+
+test("a repo with no README is never rebuilt", () => {
+  expect(needsRebuild(row({ readmeSynced: null }), null)).toBe(false);
 });
