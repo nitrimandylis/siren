@@ -1,0 +1,28 @@
+name: keepalive
+
+on:
+  schedule:
+    - cron: "41 7 1 * *" # 1st of the month, offset from :00 — GitHub delays runs most at the top of the hour
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  keepalive:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+      # The push is the point: GitHub disables every schedule in a repo after
+      # 60 days with no repository activity, and workflow runs do not count.
+      - run: |
+          git config user.name "siren"
+          git config user.email "siren@users.noreply.github.com"
+          git commit --allow-empty -m "keepalive"
+          git push
+      # Only runs if the commit landed, so the push to the phone means the
+      # whole thing worked, not just that the job started.
+      - run: bun keepalive.ts
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
