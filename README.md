@@ -51,7 +51,7 @@ Each entry in `cinema/watches.json` is one movie you refuse to miss:
 | 04 | **from** | optional `YYYY-MM-DD` — ignore showtimes before this date (for when the near dates are already gone) |
 
 Built for THE ODYSSEY in IMAX. The 30/07 dates dropped while the first version was still being written (tickets secured, watcher instantly obsolete, repo repurposed the same week).
-
+**Credits:** the `bookingData` trick comes from [johneliades/village_crawler](https://github.com/johneliades/village_crawler), which mapped out the Village booking page's embedded JSON first.
 ## 🗂 `repos` — Notion sync
 
 A projects database is only useful while it is true. This one diffs GitHub against a Notion database once a day, matched on a `GitHub Repo ID` property so renaming a repo does not fork it into two rows. A new repo gets a row, a drifted `Last Pushed` gets corrected, and the push only fires when something actually changed.
@@ -103,8 +103,6 @@ flowchart LR
 | tests | `*/*.test.ts` | what actually breaks if a parser, the diff, or the markdown breaks |
 
 **Stack:** bun · typescript · github actions · ntfy.sh — no dependencies, the sources' own JSON does all the work
-
-**Credits:** the `bookingData` trick comes from [johneliades/village_crawler](https://github.com/johneliades/village_crawler), which mapped out the Village booking page's embedded JSON first.
 
 ---
 
