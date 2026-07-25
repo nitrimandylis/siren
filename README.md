@@ -69,7 +69,7 @@ This repo is public, so its Actions logs are world-readable — the job prints c
 ```bash
 git clone https://github.com/nitrimandylis/siren.git
 cd siren
-bun test              # 29 tests on the parsers, filters, diff, and markdown
+bun test              # 34 tests on the parsers, filters, diff, and markdown
 bun cinema/watch.ts   # one manual poll
 bun repos/sync.ts     # one manual sync
 ```
@@ -100,8 +100,8 @@ flowchart LR
 | watcher | `cinema/`, `repos/` | one folder each, self-contained, no shared state |
 | markdown | `repos/markdown.ts` | markdown → Notion blocks, because the API refuses markdown |
 | cron | `.github/workflows/*.yml` | one workflow per watcher, own schedule, offset from `:00` because github delays on-the-hour jobs |
-| keepalive | `keepalive.ts` | monthly empty commit so github never disables the schedules, plus a "still armed" ping |
-| tests | `*/*.test.ts` | what actually breaks if a parser, the diff, or the markdown breaks |
+| keepalive | `keepalive.ts` | monthly empty commit so github never disables the schedules, plus a "still armed" ping listing every watcher |
+| tests | `*.test.ts`, `*/*.test.ts` | what actually breaks if a parser, the diff, or the markdown breaks |
 
 **Stack:** bun · typescript · github actions · ntfy.sh — no dependencies, the sources' own JSON does all the work
 

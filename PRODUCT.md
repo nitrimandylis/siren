@@ -75,9 +75,16 @@ Not a watcher. GitHub disables every schedule in a repo after 60 days with no
 repository activity, and workflow runs do not count — so a watcher armed in
 July for a December release quietly disarms itself in September. On the 1st of
 each month this pushes an empty commit (`git commit --allow-empty`, no state
-file, nothing to read) and then pings the current `watches.json` titles. The
+file, nothing to read) and then pings a status line per scheduled workflow. The
 ping runs only after the commit lands, so the push to the phone is proof the
 whole thing worked rather than proof the job started.
+
+The watcher list is read off `.github/workflows/*.yml` rather than hardcoded, so
+a new watcher shows up in the ping without anyone remembering to add it. Cinema
+gets its `watches.json` entries and their filters appended, because that is the
+one part that goes stale. Ceiling: a workflow file on disk means "scheduled",
+not "still enabled" — checking the latter needs the Actions API and a token,
+which is the thing keepalive exists to make unnecessary.
 
 Unverified: whether a push made with the built-in `GITHUB_TOKEN` resets the
 60-day clock. If schedules get disabled anyway, check out with `GH_PAT`.
