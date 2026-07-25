@@ -39,6 +39,16 @@ function plain(content: string) {
   return { type: "text", text: { content: content.slice(0, TEXT_LIMIT) } };
 }
 
+// Notion only accepts absolute URLs, and one bad link fails the entire append
+// with "Invalid URL for link" — so a relative target like [MIT](LICENSE) or an
+// anchor like [setup](#setup) would take a whole README down with it. Those
+// keep their text and lose the link.
+// ponytail: could resolve them against the repo's blob URL instead; plain text
+// is enough until a dropped link actually costs something.
+function isAbsolute(url: string): boolean {
+  return /^(https?|mailto):/i.test(url);
+}
+
 export function richText(line: string): object[] {
   const parts: object[] = [];
   let cursor = 0;
@@ -49,7 +59,11 @@ export function richText(line: string): object[] {
 
     const [, linkText, url, code, bold, italic] = match;
     if (url !== undefined) {
-      parts.push({ type: "text", text: { content: linkText, link: { url } } });
+      parts.push(
+        isAbsolute(url)
+          ? { type: "text", text: { content: linkText, link: { url } } }
+          : plain(linkText),
+      );
     } else if (code !== undefined) {
       parts.push({ ...plain(code), annotations: { code: true } });
     } else if (bold !== undefined) {

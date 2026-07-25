@@ -74,6 +74,20 @@ test("bold wins over italic where both could match", () => {
   expect(parts[2].annotations.italic).toBe(true);
 });
 
+test("relative link targets become plain text, since Notion rejects them", () => {
+  // [MIT](LICENSE) in a README 400s the whole append with "Invalid URL for link".
+  const parts = richText("licensed [MIT](LICENSE), see [notes](#setup)") as any[];
+  expect(parts.map((p) => p.text.content)).toEqual(["licensed ", "MIT", ", see ", "notes"]);
+  expect(parts[1].text.link).toBeUndefined();
+  expect(parts[3].text.link).toBeUndefined();
+});
+
+test("absolute http and mailto links are kept", () => {
+  const parts = richText("[site](https://ntfy.sh) [mail](mailto:a@b.com)") as any[];
+  expect(parts[0].text.link.url).toBe("https://ntfy.sh");
+  expect(parts[2].text.link.url).toBe("mailto:a@b.com");
+});
+
 test("a line with no markup is one plain part", () => {
   const parts = richText("just words") as any[];
   expect(parts.length).toBe(1);
