@@ -1,5 +1,5 @@
-import { expect, test } from "bun:test";
-import { dayOf, needsRebuild, planSync, stackFor, summarize, type Repo, type Row } from "./sync";
+import { afterAll, expect, test } from "bun:test";
+import { dayOf, needsRebuild, notion, planSync, stackFor, summarize, type Repo, type Row } from "./sync";
 
 function row(overrides: Partial<Row> = {}): Row {
   return { pageId: "p1", name: "cine", repoId: 1, lastPushed: null, readmeSynced: null, ...overrides };
@@ -81,4 +81,42 @@ test("a page that has never been synced always rebuilds", () => {
 
 test("a repo with no README is never rebuilt", () => {
   expect(needsRebuild(row({ readmeSynced: null }), null)).toBe(false);
+});
+
+// The retry loop sleeps between attempts, so the fake replaces Bun.sleep as
+// well as fetch. Without that the failure case would take twelve seconds.
+const realFetch = globalThis.fetch;
+const realSleep = Bun.sleep;
+afterAll(() => {
+  globalThis.fetch = realFetch;
+  Bun.sleep = realSleep;
+});
+
+function fakeNotion(failures: number, status: number) {
+  let calls = 0;
+  globalThis.fetch = (async () => {
+    calls++;
+    if (calls <= failures) return new Response("<html>gateway time-out</html>", { status });
+    return new Response(JSON.stringify({ ok: true }), { status: 200 });
+  }) as typeof fetch;
+  Bun.sleep = (async () => {}) as typeof Bun.sleep;
+  return () => calls;
+}
+
+test("a Notion 504 is retried instead of failing the sync", async () => {
+  const calls = fakeNotion(2, 504);
+  expect(await notion("GET", "/x", "token")).toEqual({ ok: true });
+  expect(calls()).toBe(3);
+});
+
+test("Notion gives up after four attempts and truncates the error page", async () => {
+  const calls = fakeNotion(9, 504);
+  await expect(notion("GET", "/x", "token")).rejects.toThrow("HTTP 504");
+  expect(calls()).toBe(4);
+});
+
+test("a bad Notion token is not retried", async () => {
+  const calls = fakeNotion(9, 401);
+  await expect(notion("GET", "/x", "token")).rejects.toThrow("HTTP 401");
+  expect(calls()).toBe(1);
 });
