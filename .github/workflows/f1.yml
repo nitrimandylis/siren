@@ -1,0 +1,16 @@
+name: f1
+
+on:
+  schedule:
+    - cron: "11-59/20 * * * *" # every 20 min, offset from :00 — GitHub delays runs most at the top of the hour
+  workflow_dispatch:
+
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+      - run: bun f1/watch.ts
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}

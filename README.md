@@ -13,7 +13,7 @@
 
 *a folder, a cron, a push to your phone — repeat*
 
-![runtime](https://img.shields.io/badge/runtime-bun-e63946?style=flat-square&labelColor=111111) ![ci](https://img.shields.io/badge/runs_on-github_actions-e63946?style=flat-square&labelColor=111111) ![deps](https://img.shields.io/badge/dependencies-0-ffb703?style=flat-square&labelColor=111111) ![watchers](https://img.shields.io/badge/watchers-2-ffb703?style=flat-square&labelColor=111111) ![license](https://img.shields.io/badge/license-MIT-e63946?style=flat-square&labelColor=111111)
+![runtime](https://img.shields.io/badge/runtime-bun-e63946?style=flat-square&labelColor=111111) ![ci](https://img.shields.io/badge/runs_on-github_actions-e63946?style=flat-square&labelColor=111111) ![deps](https://img.shields.io/badge/dependencies-0-ffb703?style=flat-square&labelColor=111111) ![watchers](https://img.shields.io/badge/watchers-3-ffb703?style=flat-square&labelColor=111111) ![license](https://img.shields.io/badge/license-MIT-e63946?style=flat-square&labelColor=111111)
 
 </div>
 
@@ -52,6 +52,21 @@ Each entry in `cinema/watches.json` is one movie you refuse to miss:
 
 Built for THE ODYSSEY in IMAX. The 30/07 dates dropped while the first version was still being written (tickets secured, watcher instantly obsolete, repo repurposed the same week).
 **Credits:** the `bookingData` trick comes from [johneliades/village_crawler](https://github.com/johneliades/village_crawler), which mapped out the Village booking page's embedded JSON first.
+## 🏁 `f1` — Monaco ticket announcements
+
+Monaco Grand Prix tickets are not a page you can watch for a buy button. Per-grandstand availability sits behind a session-bound XHR inside a JavaScript configurator, and Cloudflare's waiting room switches on at exactly the moment it would matter. What *is* catchable is the announcement, which ACM publishes four to six weeks before the sale — so this watches for that and hands you the date, rather than pretending it can win a click race.
+
+Two sources, deliberately unequal:
+
+| | source | role |
+|---|---|---|
+| 01 | `acm.mc/wp-json/wp/v2/posts` | **primary** — the only endpoint verified to answer a datacenter IP, and where the announcement lands. A failure throws, because a watcher that has been quietly 403ing for a month looks exactly like one with nothing to report |
+| 02 | `monaco-grandprix.com/.../editions/2469` | **best-effort** — its `billetterie_presale_open_date` is the exact on-sale datetime, weeks early, but the host 403s datacenter IPs. Logs and skips on failure, never alarms, never fails the run |
+
+There is no state, by construction. An announcement only counts while it is inside a 45-day freshness window, so last year's `billetterie-2026-prenez-date` cannot fire and no high-water mark has to be stored anywhere. Same alarm-not-a-log contract as `cinema`.
+
+ACM's own history sets the expectation: 2025 tickets opened end of July 2024, and 2026 was announced on 7 August 2025 with presale on 8 September. The race itself is **3-6 June 2027** — the 15-16 May 2027 date you will find everywhere is the Monaco E-Prix, which is Formula E and a different event entirely.
+
 ## 🗂 `repos` — Notion sync
 
 A projects database is only useful while it is true. This one diffs GitHub against a Notion database once a day, matched on a `GitHub Repo ID` property so renaming a repo does not fork it into two rows. A new repo gets a row, a drifted `Last Pushed` gets corrected, and the push only fires when something actually changed.
@@ -69,8 +84,9 @@ This repo is public, so its Actions logs are world-readable — the job prints c
 ```bash
 git clone https://github.com/nitrimandylis/siren.git
 cd siren
-bun test              # 34 tests on the parsers, filters, diff, and markdown
+bun test              # 40 tests on the parsers, filters, diff, and markdown
 bun cinema/watch.ts   # one manual poll
+bun f1/watch.ts       # one manual check
 bun repos/sync.ts     # one manual sync
 ```
 
@@ -97,7 +113,7 @@ flowchart LR
 | layer | path | job |
 |---|---|---|
 | push | `ntfy.ts` | the one place `NTFY_TOPIC` is read — every watcher sends through it |
-| watcher | `cinema/`, `repos/` | one folder each, self-contained, no shared state |
+| watcher | `cinema/`, `f1/`, `repos/` | one folder each, self-contained, no shared state |
 | markdown | `repos/markdown.ts` | markdown → Notion blocks, because the API refuses markdown |
 | cron | `.github/workflows/*.yml` | one workflow per watcher, own schedule, offset from `:00` because github delays on-the-hour jobs |
 | keepalive | `keepalive.ts` | monthly empty commit so github never disables the schedules, plus a "still armed" ping listing every watcher |

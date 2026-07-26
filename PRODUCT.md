@@ -69,6 +69,40 @@ it). The workflow maps `NOTION_API_KEY` to the `NOTION_TOKEN` env var the script
 reads — GitHub reserves the `GITHUB_` prefix, which is also why the PAT is not
 called `GITHUB_TOKEN`.
 
+### `f1` — Monaco 2027 ticket announcement
+
+Polls every 20 min for ACM announcing the 2027 Monaco Grand Prix ticket sale.
+The race is 3-6 June 2027 (the 15-16 May 2027 date is the Monaco E-Prix, a
+different event on a different site).
+
+Two sources, deliberately unequal:
+
+- `acm.mc/wp-json/wp/v2/posts` is the primary. It is the only endpoint verified
+  to answer a datacenter IP, and it is where the announcement gets published. A
+  failure here throws, on the cinema canary principle.
+- `monaco-grandprix.com/wp-json/acf/v3/editions/2469` is the better signal — its
+  `billetterie_presale_open_date` carries the exact on-sale datetime weeks ahead
+  — but the host 403s datacenter IPs. Best-effort: a failure logs and is skipped,
+  never alarms, never fails the run. Edition post ids are reused and re-slugged
+  each year, so `2469` survives the 2026 → 2027 rename.
+
+Stateless like `cinema`, by construction: an announcement only counts while it is
+within `FRESH_DAYS` (45), so last year's `billetterie-2026-prenez-date` cannot
+alarm and no high-water mark has to be stored. It re-fires every cycle until the
+workflow is disabled.
+
+Timing, from ACM's own history: 2025 tickets opened end of July 2024, 2026 was
+announced 07/08/2025 with presale 08/09 and general sale 22/09. Built 26/07/2026,
+inside that window.
+
+Known ceilings: per-grandstand availability is not obtainable — it sits behind a
+`PHPSESSID`-bound XHR in a JS configurator, and Cloudflare's waiting room
+activates at the moment it would matter. Actions crons also slip 5-20 min under
+load, so this is built to catch the announcement (weeks of warning), not the
+on-sale instant. Set a real alarm from the date it reports.
+
+Secrets: `NTFY_TOPIC`.
+
 ### `keepalive` — monthly heartbeat
 
 Not a watcher. GitHub disables every schedule in a repo after 60 days with no
