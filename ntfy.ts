@@ -1,6 +1,8 @@
 // Shared push helper. Every watcher sends its alerts through here so the topic
 // is read from the environment in exactly one place.
 
+import { fetchRetry } from "./retry";
+
 export type Push = {
   title: string;
   body: string;
