@@ -81,10 +81,13 @@ Two sources, deliberately unequal:
   to answer a datacenter IP, and it is where the announcement gets published. A
   failure here throws, on the cinema canary principle.
 - `monaco-grandprix.com/wp-json/acf/v3/editions/2469` is the better signal — its
-  `billetterie_presale_open_date` carries the exact on-sale datetime weeks ahead
-  — but the host 403s datacenter IPs. Best-effort: a failure logs and is skipped,
-  never alarms, never fails the run. Edition post ids are reused and re-slugged
-  each year, so `2469` survives the 2026 → 2027 rename.
+  `billetterie_presale_open_date` carries the exact on-sale datetime weeks ahead.
+  The host 403s *some* datacenter IPs (Anthropic's fetcher gets one), but a real
+  Actions runner reached it on 26/07/2026. Kept best-effort anyway: a failure
+  logs and is skipped, never alarms, never fails the run, because Cloudflare's
+  waiting room goes live at exactly the moment this matters most. Edition post
+  ids are reused and re-slugged each year, so `2469` survives the 2026 → 2027
+  rename.
 
 Stateless like `cinema`, by construction: an announcement only counts while it is
 within `FRESH_DAYS` (45), so last year's `billetterie-2026-prenez-date` cannot

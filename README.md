@@ -61,7 +61,7 @@ Two sources, deliberately unequal:
 | | source | role |
 |---|---|---|
 | 01 | `acm.mc/wp-json/wp/v2/posts` | **primary** — the only endpoint verified to answer a datacenter IP, and where the announcement lands. A failure throws, because a watcher that has been quietly 403ing for a month looks exactly like one with nothing to report |
-| 02 | `monaco-grandprix.com/.../editions/2469` | **best-effort** — its `billetterie_presale_open_date` is the exact on-sale datetime, weeks early, but the host 403s datacenter IPs. Logs and skips on failure, never alarms, never fails the run |
+| 02 | `monaco-grandprix.com/.../editions/2469` | **best-effort** — its `billetterie_presale_open_date` is the exact on-sale datetime, weeks early. The host 403s some datacenter ranges but answers Actions runners; kept best-effort anyway, since Cloudflare's waiting room goes live at exactly the moment this matters. Logs and skips on failure, never alarms, never fails the run |
 
 There is no state, by construction. An announcement only counts while it is inside a 45-day freshness window, so last year's `billetterie-2026-prenez-date` cannot fire and no high-water mark has to be stored anywhere. Same alarm-not-a-log contract as `cinema`.
 
