@@ -1,5 +1,13 @@
 import { expect, test } from "bun:test";
-import { freshAnnouncements, resolve, storeSaleDates, type Post, type SaleDate } from "./watch";
+import {
+  freshAnnouncements,
+  resolve,
+  shouldSend,
+  storeSaleDates,
+  type Post,
+  type SaleDate,
+  type Signal,
+} from "./watch";
 
 // Slugs and dates taken from ACM's real announcement history.
 const posts: Post[] = [
@@ -55,6 +63,16 @@ test("store dates only count once the year rolls over to the target", () => {
   expect(setUp[0].label).toBe("general sale");
 });
 
+test("store times are read as Monaco local, not as the runner's UTC", () => {
+  // Actions runners are UTC. Parsed bare, a 09:00 Monaco sale would be treated
+  // as 09:00 UTC and the alarm would fire two hours after the sale opened.
+  const [sale] = storeSaleDates(
+    { acf: { race_infos: { billetterie_open_date: "2027-09-20 09:00:00" } } },
+    2027,
+  );
+  expect(sale.when.toISOString()).toBe("2027-09-20T07:00:00.000Z");
+});
+
 test("a missing or reshaped store payload is empty, not a crash", () => {
   expect(storeSaleDates(null, 2027)).toEqual([]);
   expect(storeSaleDates({}, 2027)).toEqual([]);
@@ -92,6 +110,45 @@ test("a post saying the sale is open is live even with the store unreachable", (
     { date: "2026-07-25T09:00:00", slug: "la-billetterie-est-ouverte-2027", link: "https://acm.mc/6" },
   ];
   expect(resolve(open, [], now).phase).toBe("live");
+});
+
+const line = (signal: Signal) => `${signal.phase}\n${signal.detail}`;
+const DATED: Signal = { phase: "dated", detail: "presale: 2027-09-08 09:00:00" };
+const ANNOUNCED: Signal = { phase: "announced", detail: "2026-07-20 billetterie-2027-prenez-date" };
+
+test("news is sent once, then stays quiet", () => {
+  expect(shouldSend("", ANNOUNCED)).toBe(true);
+  expect(shouldSend(line(ANNOUNCED), ANNOUNCED)).toBe(false);
+});
+
+test("the store blinking out does not re-announce the news", () => {
+  // The whole reason shouldSend exists. The store 403s intermittently, so this
+  // sequence runs every time it does, and sending on any change would push
+  // twice per blip for the six weeks before the sale.
+  let state = "";
+  const sent: string[] = [];
+  const cycle = (signal: Signal) => {
+    if (!shouldSend(state, signal)) return;
+    sent.push(signal.phase);
+    state = line(signal);
+  };
+
+  cycle(DATED); //     store answers
+  cycle(ANNOUNCED); // store 403s, phase falls back
+  cycle(DATED); //     store answers again
+  cycle(ANNOUNCED); // and blips again
+
+  expect(sent).toEqual(["dated"]);
+});
+
+test("a genuine upgrade still gets through", () => {
+  expect(shouldSend(line(ANNOUNCED), DATED)).toBe(true);
+  expect(shouldSend(line(DATED), { phase: "dated", detail: "presale: 2027-09-15 09:00:00" })).toBe(true);
+});
+
+test("live always rings, even having just rung", () => {
+  const live: Signal = { phase: "live", detail: "presale opened 2027-09-08 09:00:00" };
+  expect(shouldSend(line(live), live)).toBe(true);
 });
 
 test("'ouverture' is read as live, not as a save-the-date", () => {

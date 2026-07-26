@@ -102,8 +102,23 @@ announcement beats nothing.
   repeating it every 20 minutes for six weeks is how you train yourself to
   ignore the one push that matters.
 
+`shouldSend()` holds that rule, and its real job is the store blinking out.
+Losing the store drops the phase from `dated` back to `announced` with nothing
+having actually happened, so alerting on *any* change would push twice per 403 —
+down on the blip, up when it clears — every 20 minutes. A downgrade is therefore
+silence, and it does not write state either, so the higher phase survives the
+outage. Only a rank increase or new detail at the same rank alerts.
+
+Store datetimes are Monaco local with no zone on them and Actions runners are
+UTC, so they are parsed with an explicit `+02:00`. Without it a 09:00 sale reads
+as 09:00 UTC and `live` fires two hours after the sale opened. Ceiling: CEST is
+correct for the Aug-Sep window every sale has landed in, an hour out if one ever
+moves to winter, which is inside the cron's own 5-20 min slip.
+
 Ticket-post matching stays stateless: an announcement only counts inside
-`FRESH_DAYS` (45), so last year's `billetterie-2026-prenez-date` can never fire.
+`FRESH_DAYS` (60), so last year's `billetterie-2026-prenez-date` can never fire.
+60 and not 45 because the 2026 announcement-to-general-sale gap was 46 days
+(07/08 → 22/09), so a 45-day window went stale a day before its own sale.
 The once-only rule is the exception to the repo's no-state default — `state.txt`
 holds one line, `phase` plus what produced it, committed back by the workflow
 (`contents: write`). It is the smallest thing that works; every stateless

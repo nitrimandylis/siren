@@ -42,8 +42,10 @@ const TICKET_SLUG = /billetterie|ouvert|prenez-date|reservez/i;
 const LIVE_SLUG = /ouvert|reservez/i;
 
 // An announcement only counts while it is fresh, so last year's
-// billetterie-2026-prenez-date can never fire.
-const FRESH_DAYS = 45;
+// billetterie-2026-prenez-date can never fire. 60 rather than 45: ACM announced
+// the 2026 sale on 07/08/2025 and opened general sale on 22/09, a 46-day gap,
+// so a 45-day window goes stale one day before the sale it announced.
+const FRESH_DAYS = 60;
 
 // One line: the phase and what produced it. Compared against the last run to
 // keep news from repeating; see main().
@@ -62,6 +64,14 @@ export function freshAnnouncements(posts: Post[], now: Date, freshDays = FRESH_D
 // The store publishes both dates as "YYYY-MM-DD HH:MM:SS". While they still
 // read 2025 the 2027 sale has not been set up; the year rolling over is the
 // earliest possible signal that it has.
+//
+// The times are Monaco local with no zone on them, and an Actions runner is
+// UTC, so parsing them bare reads 09:00 Monaco as 09:00 UTC and the sale looks
+// two hours later than it is.
+// ponytail: +02:00 is CEST, correct for the Aug-Sep window every sale has
+// landed in. A date in winter would be an hour out, which is inside the 5-20
+// min the cron already slips. Use Intl if a sale ever moves to CET.
+const MONACO_SUMMER_OFFSET = "+02:00";
 export function storeSaleDates(payload: any, targetYear: number): SaleDate[] {
   const infos = payload?.acf?.race_infos ?? {};
   const dates: SaleDate[] = [];
@@ -69,7 +79,7 @@ export function storeSaleDates(payload: any, targetYear: number): SaleDate[] {
     const raw = infos[field];
     if (typeof raw !== "string") continue;
     if (Number(raw.slice(0, 4)) < targetYear) continue;
-    const when = new Date(raw.replace(" ", "T"));
+    const when = new Date(raw.replace(" ", "T") + MONACO_SUMMER_OFFSET);
     if (Number.isNaN(when.getTime())) continue;
     dates.push({ label: field.includes("presale") ? "presale" : "general sale", raw, when });
   }
@@ -103,6 +113,23 @@ export function resolve(announcements: Post[], sales: SaleDate[], now: Date): Si
   }
 
   return { phase: "nothing", detail: "" };
+}
+
+const RANK: Record<Phase, number> = { nothing: 0, announced: 1, dated: 2, live: 3 };
+
+// Whether a signal is worth pushing, given the line the last run wrote.
+//
+// The subtle case is the store going quiet. Its 403 is intermittent, and losing
+// it drops the phase from `dated` back to `announced` with nothing new having
+// happened. Sending on any change would then alarm twice per blip — down on the
+// 403, up again when it clears — every 20 minutes, which is exactly the habit
+// the phases exist to avoid. So a downgrade is silence: a source disappearing
+// is not news.
+export function shouldSend(last: string, signal: Signal): boolean {
+  if (signal.phase === "live") return true; // the alarm, rings until you act
+  if (last === `${signal.phase}\n${signal.detail}`) return false;
+  const lastPhase = (last.split("\n")[0] ?? "nothing") as Phase;
+  return RANK[signal.phase] >= (RANK[lastPhase] ?? 0);
 }
 
 const HEADLINE: Record<Exclude<Phase, "nothing">, { title: string; priority: "high" | "urgent" }> = {
@@ -155,13 +182,12 @@ async function main() {
   // "live" is the cinema contract: an alarm that keeps ringing until you go and
   // buy. Everything before it is news, and news is only news once — repeating it
   // every 20 minutes for six weeks is how you train yourself to ignore the one
-  // push that matters.
-  const fingerprint = `${signal.phase}\n${signal.detail}`;
-  if (signal.phase !== "live" && lastSignal() === fingerprint) {
-    console.log(`monaco ${TARGET_YEAR}: ${signal.phase}, already sent`);
-    return;
+  // push that matters. See shouldSend() for the rule.
+  if (!shouldSend(lastSignal(), signal)) {
+    console.log(`monaco ${TARGET_YEAR}: ${signal.phase}, nothing new to say`);
+    return; // deliberately does not write state, so a lost source cannot un-announce news
   }
-  writeFileSync(STATE_FILE, `${fingerprint}\n`);
+  writeFileSync(STATE_FILE, `${signal.phase}\n${signal.detail}\n`);
 
   const headline = HEADLINE[signal.phase];
   await ping({
