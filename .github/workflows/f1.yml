@@ -20,6 +20,10 @@ jobs:
       # Only commits when the phase actually changed, so a quiet week leaves no
       # trace. The rebase is for the rare collision with keepalive's push.
       - run: |
+          if [ ! -f f1/state.txt ]; then
+            echo "no state yet — nothing has been announced"
+            exit 0
+          fi
           git config user.name "siren"
           git config user.email "siren@users.noreply.github.com"
           git add f1/state.txt
