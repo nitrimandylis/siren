@@ -20,6 +20,7 @@ jobs:
           git config user.name "siren"
           git config user.email "siren@users.noreply.github.com"
           git commit --allow-empty -m "keepalive"
+          git pull --rebase -q # f1 pushes state on its own schedule; do not race it
           git push
       # Only runs if the commit landed, so the push to the phone means the
       # whole thing worked, not just that the job started.

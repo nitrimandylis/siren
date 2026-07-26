@@ -5,6 +5,9 @@ on:
     - cron: "11-59/20 * * * *" # every 20 min, offset from :00 — GitHub delays runs most at the top of the hour
   workflow_dispatch:
 
+permissions:
+  contents: write # f1/state.txt, so news is announced once instead of every 20 min
+
 jobs:
   watch:
     runs-on: ubuntu-latest
@@ -14,3 +17,16 @@ jobs:
       - run: bun f1/watch.ts
         env:
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+      # Only commits when the phase actually changed, so a quiet week leaves no
+      # trace. The rebase is for the rare collision with keepalive's push.
+      - run: |
+          git config user.name "siren"
+          git config user.email "siren@users.noreply.github.com"
+          git add f1/state.txt
+          if git diff --cached --quiet; then
+            echo "state unchanged"
+          else
+            git commit -m "f1 state"
+            git pull --rebase -q
+            git push
+          fi

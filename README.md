@@ -63,7 +63,15 @@ Two sources, deliberately unequal:
 | 01 | `acm.mc/wp-json/wp/v2/posts` | **primary** — the only endpoint verified to answer a datacenter IP, and where the announcement lands. A failure throws, because a watcher that has been quietly 403ing for a month looks exactly like one with nothing to report |
 | 02 | `monaco-grandprix.com/.../editions/2469` | **best-effort** — its `billetterie_presale_open_date` is the exact on-sale datetime, weeks early. The host 403s some datacenter ranges but answers Actions runners; kept best-effort anyway, since Cloudflare's waiting room goes live at exactly the moment this matters. Logs and skips on failure, never alarms, never fails the run |
 
-There is no state, by construction. An announcement only counts while it is inside a 45-day freshness window, so last year's `billetterie-2026-prenez-date` cannot fire and no high-water mark has to be stored anywhere. Same alarm-not-a-log contract as `cinema`.
+The announcement and the sale are six weeks apart, which breaks `cinema`'s contract. An alarm that rings until you act works when acting takes an afternoon; here you would silence the August announcement and hear nothing when the sale opened in September. So this watcher has phases:
+
+| | phase | behaviour |
+|---|---|---|
+| 01 | **live** | a sale date has passed, or ACM posted that the sale is open — **urgent**, and repeats every cycle until you go and buy. The cinema contract, applied only where it fits |
+| 02 | **dated** | the store carries a future 2027 sale datetime — **high**, sent once, because the date is not going to change |
+| 03 | **announced** | ACM posted about tickets but no date is readable yet — **high**, sent once |
+
+Announcement matching is stateless: a post only counts inside a 45-day freshness window, so last year's `billetterie-2026-prenez-date` can never fire. The send-once rule is the one exception to this repo's no-state default — `f1/state.txt` holds a single line and gets committed back by the workflow. It is the smallest thing that works, and every stateless alternative was more code and worse behaviour. Nothing sensitive lives in it: a phase name and a public slug.
 
 ACM's own history sets the expectation: 2025 tickets opened end of July 2024, and 2026 was announced on 7 August 2025 with presale on 8 September. The race itself is **3-6 June 2027** — the 15-16 May 2027 date you will find everywhere is the Monaco E-Prix, which is Formula E and a different event entirely.
 
@@ -84,7 +92,7 @@ This repo is public, so its Actions logs are world-readable — the job prints c
 ```bash
 git clone https://github.com/nitrimandylis/siren.git
 cd siren
-bun test              # 40 tests on the parsers, filters, diff, and markdown
+bun test              # 46 tests on the parsers, filters, diff, and markdown
 bun cinema/watch.ts   # one manual poll
 bun f1/watch.ts       # one manual check
 bun repos/sync.ts     # one manual sync
@@ -113,7 +121,7 @@ flowchart LR
 | layer | path | job |
 |---|---|---|
 | push | `ntfy.ts` | the one place `NTFY_TOPIC` is read — every watcher sends through it |
-| watcher | `cinema/`, `f1/`, `repos/` | one folder each, self-contained, no shared state |
+| watcher | `cinema/`, `f1/`, `repos/` | one folder each, self-contained, no shared state (f1 keeps one line in `state.txt`) |
 | markdown | `repos/markdown.ts` | markdown → Notion blocks, because the API refuses markdown |
 | cron | `.github/workflows/*.yml` | one workflow per watcher, own schedule, offset from `:00` because github delays on-the-hour jobs |
 | keepalive | `keepalive.ts` | monthly empty commit so github never disables the schedules, plus a "still armed" ping listing every watcher |

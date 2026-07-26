@@ -89,10 +89,30 @@ Two sources, deliberately unequal:
   ids are reused and re-slugged each year, so `2469` survives the 2026 → 2027
   rename.
 
-Stateless like `cinema`, by construction: an announcement only counts while it is
-within `FRESH_DAYS` (45), so last year's `billetterie-2026-prenez-date` cannot
-alarm and no high-water mark has to be stored. It re-fires every cycle until the
-workflow is disabled.
+Four phases, because the announcement and the sale are weeks apart and cinema's
+single-alarm contract does not survive that gap — you would silence the
+announcement in August and hear nothing in September. `resolve()` ranks them: a
+sale date that has passed beats everything, a post saying the sale is open beats
+a date that has not passed, a known future date beats a vague announcement, an
+announcement beats nothing.
+
+- `live` — urgent, and repeats every cycle until you act. This is the cinema
+  contract, and the only phase where repeating is correct.
+- `dated` / `announced` — high priority, sent **once**. News is only news once;
+  repeating it every 20 minutes for six weeks is how you train yourself to
+  ignore the one push that matters.
+
+Ticket-post matching stays stateless: an announcement only counts inside
+`FRESH_DAYS` (45), so last year's `billetterie-2026-prenez-date` can never fire.
+The once-only rule is the exception to the repo's no-state default — `state.txt`
+holds one line, `phase` plus what produced it, committed back by the workflow
+(`contents: write`). It is the smallest thing that works; every stateless
+alternative was more code and worse behaviour. Nothing sensitive: a phase name
+and a public slug.
+
+Slug order matters. `LIVE_SLUG` is checked before the save-the-date patterns
+because `ouverture-de-la-billetterie-officielle` matches both, and reading it as
+a save-the-date would downgrade the one alert that must be urgent.
 
 Timing, from ACM's own history: 2025 tickets opened end of July 2024, 2026 was
 announced 07/08/2025 with presale 08/09 and general sale 22/09. Built 26/07/2026,
