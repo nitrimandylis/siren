@@ -6,6 +6,7 @@
 // NOTION_TOKEN (internal integration with the database shared to it).
 
 import { ping } from "../ntfy";
+import { fetchRetry } from "../retry";
 import { toBlocks } from "./markdown";
 
 const OWNER = "nitrimandylis";
@@ -113,7 +114,7 @@ async function githubRepos(token: string): Promise<Repo[]> {
   let page = 1;
   while (true) {
     const url = `https://api.github.com/user/repos?per_page=100&page=${page}&affiliation=owner`;
-    const response = await fetch(url, {
+    const response = await fetchRetry(url, {
       headers: { Authorization: `Bearer ${token}`, "User-Agent": "siren" },
     });
     if (!response.ok) {
@@ -127,30 +128,22 @@ async function githubRepos(token: string): Promise<Repo[]> {
 }
 
 export async function notion(method: string, path: string, token: string, body?: unknown) {
-  // Notion sits behind Cloudflare and occasionally answers 5xx or 429. Those are
-  // temporary, so retry a few times before giving up on the whole sync.
-  for (let attempt = 1; ; attempt++) {
-    const response = await fetch(`https://api.notion.com/v1${path}`, {
-      method,
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Notion-Version": NOTION_VERSION,
-        "Content-Type": "application/json",
-      },
-      body: body === undefined ? undefined : JSON.stringify(body),
-    });
-    if (response.ok) return response.json();
-
-    const retryable = response.status === 429 || response.status >= 500;
-    if (retryable && attempt < 4) {
-      await Bun.sleep(attempt * 2000);
-      continue;
-    }
-    // ponytail: the body is truncated because Cloudflare error pages are whole
-    // HTML documents and they drown the Actions log.
+  const response = await fetchRetry(`https://api.notion.com/v1${path}`, {
+    method,
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Notion-Version": NOTION_VERSION,
+      "Content-Type": "application/json",
+    },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+  if (!response.ok) {
+    // The body is truncated because Cloudflare error pages are whole HTML
+    // documents and they drown the Actions log.
     const detail = (await response.text()).slice(0, 300);
     throw new Error(`Notion ${path} returned HTTP ${response.status}: ${detail}`);
   }
+  return response.json();
 }
 
 async function notionRows(token: string): Promise<Row[]> {
@@ -224,7 +217,7 @@ async function clearBody(token: string, pageId: string) {
 // "this body is out of date" — a push that never touched it changes nothing.
 async function readmeChangedOn(token: string, name: string): Promise<string | null> {
   const url = `https://api.github.com/repos/${OWNER}/${name}/commits?path=README.md&per_page=1`;
-  const response = await fetch(url, {
+  const response = await fetchRetry(url, {
     headers: { Authorization: `Bearer ${token}`, "User-Agent": "siren" },
   });
   if (!response.ok) {
@@ -242,7 +235,7 @@ async function markSynced(token: string, pageId: string, changedOn: string) {
 }
 
 async function readmeFor(token: string, name: string): Promise<string | null> {
-  const response = await fetch(`https://api.github.com/repos/${OWNER}/${name}/readme`, {
+  const response = await fetchRetry(`https://api.github.com/repos/${OWNER}/${name}/readme`, {
     headers: {
       Authorization: `Bearer ${token}`,
       Accept: "application/vnd.github.raw",

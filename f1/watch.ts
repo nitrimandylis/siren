@@ -20,6 +20,7 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { ping } from "../ntfy";
+import { fetchRetry } from "../retry";
 
 const TARGET_YEAR = 2027;
 
@@ -119,7 +120,7 @@ function lastSignal(): string {
 }
 
 async function fetchJson(url: string) {
-  const response = await fetch(url, { headers: { "User-Agent": USER_AGENT } });
+  const response = await fetchRetry(url, { headers: { "User-Agent": USER_AGENT } });
   if (!response.ok) {
     throw new Error(`HTTP ${response.status}`);
   }

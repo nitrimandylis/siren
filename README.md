@@ -121,6 +121,7 @@ flowchart LR
 | layer | path | job |
 |---|---|---|
 | push | `ntfy.ts` | the one place `NTFY_TOPIC` is read — every watcher sends through it |
+| http | `retry.ts` | every outbound call goes through it: retries 429 and 5xx so one Cloudflare blip does not fail a run |
 | watcher | `cinema/`, `f1/`, `repos/` | one folder each, self-contained, no shared state (f1 keeps one line in `state.txt`) |
 | markdown | `repos/markdown.ts` | markdown → Notion blocks, because the API refuses markdown |
 | cron | `.github/workflows/*.yml` | one workflow per watcher, own schedule, offset from `:00` because github delays on-the-hour jobs |

@@ -3,6 +3,7 @@
 // deleting its entry (or disable the workflow).
 
 import { ping } from "../ntfy";
+import { fetchRetry } from "../retry";
 import watches from "./watches.json";
 
 const PAGE_URL = "https://www.villagecinemas.gr/en/tickets/film-choice";
@@ -83,7 +84,7 @@ async function alert(watch: Watch, lines: string[]) {
 }
 
 async function main() {
-  const response = await fetch(PAGE_URL, { headers: { "User-Agent": USER_AGENT } });
+  const response = await fetchRetry(PAGE_URL, { headers: { "User-Agent": USER_AGENT } });
   if (!response.ok) {
     throw new Error(`Village Cinemas returned HTTP ${response.status}`);
   }

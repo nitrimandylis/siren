@@ -20,7 +20,7 @@ export async function ping(push: Push) {
   if (push.tags) headers.Tags = push.tags;
   if (push.click) headers.Click = push.click;
 
-  const response = await fetch(`https://ntfy.sh/${topic}`, {
+  const response = await fetchRetry(`https://ntfy.sh/${topic}`, {
     method: "POST",
     headers,
     body: push.body,
