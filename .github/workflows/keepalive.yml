@@ -17,8 +17,10 @@ jobs:
       # The push is the point: GitHub disables every schedule in a repo after
       # 60 days with no repository activity, and workflow runs do not count.
       - run: |
-          git config user.name "siren"
-          git config user.email "siren@users.noreply.github.com"
+          # The ID prefix is required: bare "name@users.noreply.github.com" is
+          # the legacy form and GitHub credits whoever owns that username.
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git commit --allow-empty -m "keepalive"
           git pull --rebase -q # f1 pushes state on its own schedule; do not race it
           git push

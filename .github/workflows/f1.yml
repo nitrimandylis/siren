@@ -24,8 +24,10 @@ jobs:
             echo "no state yet — nothing has been announced"
             exit 0
           fi
-          git config user.name "siren"
-          git config user.email "siren@users.noreply.github.com"
+          # The ID prefix is required: bare "name@users.noreply.github.com" is
+          # the legacy form and GitHub credits whoever owns that username.
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add f1/state.txt
           if git diff --cached --quiet; then
             echo "state unchanged"
