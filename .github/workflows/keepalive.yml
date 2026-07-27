@@ -16,9 +16,9 @@ jobs:
       - uses: oven-sh/setup-bun@v2
       # The push is the point: GitHub disables every schedule in a repo after
       # 60 days with no repository activity, and workflow runs do not count.
+      # The ID prefix in the email is required: bare "name@users.noreply.github.com"
+      # is the legacy form and GitHub credits whoever owns that username.
       - run: |
-          # The ID prefix is required: bare "name@users.noreply.github.com" is
-          # the legacy form and GitHub credits whoever owns that username.
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git commit --allow-empty -m "keepalive"
