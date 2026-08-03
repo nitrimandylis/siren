@@ -14,6 +14,7 @@ import { listDiscussions, type Discussion } from "../bacpack/src/classes.ts";
 import { fetchTasks, type Task } from "../bacpack/src/due.ts";
 import { ping } from "../ntfy";
 import { notion } from "../notion";
+import { classify, type Verdict } from "./classify.ts";
 
 // Discussion ids are a global ascending sequence: 31 posts spanning Oct 2025 to
 // Jun 2026 across nine classes sorted by id in exactly date order, with no
@@ -219,17 +220,28 @@ async function createRow(token: string, task: Task, school: string) {
 // ("HW for Tuesday May 5", or "May 24" meaning the name of a past paper, or
 // nothing at all). Guessing it here is how a row gets filed a week early. The
 // empty cells are the triage queue: link but no date means you have not read it.
-async function createPostRow(token: string, post: Discussion, className: string, school: string) {
-  await notion("POST", "/pages", token, {
-    parent: { database_id: DATABASE_ID },
-    properties: {
-      Task: { title: [{ text: { content: post.title || "(untitled post)" } }] },
-      Subject: { select: { name: subjectFor(className) } },
-      Status: { select: { name: "To Do" } },
-      ManageBac: { url: `https://${school}.managebac.com${post.url}` },
-      Notes: { rich_text: [{ text: { content: noteFor(post) } }] },
-    },
-  });
+async function createPostRow(
+  token: string,
+  post: Discussion,
+  className: string,
+  school: string,
+  verdict: Verdict | undefined,
+) {
+  // Without a verdict the row is deliberately bare, which is the triage queue.
+  // With one, the fields Claude was confident about are filled and the rest
+  // stay empty, so a partial answer still lands as a partial row.
+  const properties: Record<string, unknown> = {
+    Task: { title: [{ text: { content: verdict?.title || post.title || "(untitled post)" } }] },
+    Subject: { select: { name: subjectFor(className) } },
+    Status: { select: { name: "To Do" } },
+    ManageBac: { url: `https://${school}.managebac.com${post.url}` },
+    Notes: { rich_text: [{ text: { content: noteFor(post) } }] },
+  };
+  if (verdict?.due) properties.Due = { date: { start: verdict.due } };
+  if (verdict?.type) properties.Type = { select: { name: verdict.type } };
+  if (verdict?.priority) properties.Priority = { select: { name: verdict.priority } };
+
+  await notion("POST", "/pages", token, { parent: { database_id: DATABASE_ID }, properties });
 }
 
 async function touchRow(token: string, pageId: string, due: string) {
@@ -271,10 +283,17 @@ async function main() {
     seen,
   );
   const freshIds = new Set(fresh.map((p) => p.id));
-  const filing = dedupePosts(posts.filter((p) => freshIds.has(p.post.id)));
+  const candidates = dedupePosts(posts.filter((p) => freshIds.has(p.post.id)));
+
+  // Claude reads the prose and decides what is actually work. An empty map
+  // means it did not run or could not be trusted, and then everything files
+  // untriaged exactly as it did before Claude was in this at all.
+  const verdicts = await classify(candidates);
+  const filing = candidates.filter(({ post }) => verdicts.get(post.id)?.task !== false);
+  const dropped = candidates.length - filing.length;
 
   for (const { post, className } of filing) {
-    await createPostRow(token, post, className, school);
+    await createPostRow(token, post, className, school, verdicts.get(post.id));
     await Bun.sleep(350);
   }
   writeFileSync(SEEN_PATH, `${highestId(posts.map((p) => p.post), seen)}\n`);
@@ -283,7 +302,7 @@ async function main() {
   // never assignment titles or class names. The names go to the phone instead.
   console.log(
     `${tasks.length} upcoming, ${plan.create.length} added, ${plan.touch.length} moved, ` +
-      `${posts.length} posts seen, ${filing.length} filed${seen === null ? " (first run, seeded)" : ""}`,
+      `${posts.length} posts seen, ${filing.length} filed, ${dropped} not tasks, ${filing.filter(({ post }) => verdicts.get(post.id)?.due).length} dated${seen === null ? " (first run, seeded)" : ""}`,
   );
 
   const changed = plan.create.length + plan.touch.length + filing.length;
@@ -292,7 +311,10 @@ async function main() {
     title: `ManageBac: ${plan.create.length + filing.length} new, ${plan.touch.length} moved`,
     body: [
       summarize(plan),
-      ...filing.map(({ post }) => `? ${post.title} (${post.category ?? "uncategorised"})`),
+      ...filing.map(({ post }) => {
+        const v = verdicts.get(post.id);
+        return `${v?.due ? "+" : "?"} ${v?.title ?? post.title}${v?.due ? ` -> ${v.due}` : ""}`;
+      }),
     ]
       .filter(Boolean)
       .join("\n"),

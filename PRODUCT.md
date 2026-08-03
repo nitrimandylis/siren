@@ -197,10 +197,43 @@ May 24, question 2` names a past paper rather than a deadline, and `solve them
 if you have the time` is not a task at all. Any regex over that files real work
 on invented dates.
 
-So every new post becomes a row with **no Due and no Priority**, which is the
-triage queue: a ManageBac link and no date means you have not read it yet. You
-set the date, or you delete the row. Volume is about one post a week across all
-nine classes, so triage is a minute.
+So Claude does the reading, in the workflow, on a `CLAUDE_CODE_OAUTH_TOKEN`.
+That is auth precedence #5, a one-year token from `claude setup-token` that
+bills the subscription rather than an API key. **Never put `ANTHROPIC_API_KEY`
+in this job**: it is precedence #3, it would win silently, and it sends an
+`X-Api-Key` header.
+
+The token "can only make model requests", so claude.ai connectors are
+unavailable and Claude cannot reach Notion even in principle. It returns a JSON
+array and `sync.ts` does every write. That is the right shape anyway: the write
+path is already built, rate-limited and tested, and the model's answer is
+visible in the log before it becomes a row.
+
+It gets no tools at all (`--disallowed-tools`). The runner has the ManageBac
+session cookie on disk and the logs are world-readable, so a classifier with
+Bash is a bad trade for a job that needs no tools.
+
+**Everything it returns is untrusted.** `validate()` drops any entry with an id
+that was never sent, a non-boolean `task`, a `Type` or `Priority` outside the
+database's vocabulary, or a due date falling before the post was written or more
+than a year after it. That last check is the one that matters: it is what stops
+"Solve from May 24, question 2" from filing real work on the date of a past
+paper. A dropped verdict means the post files untriaged, exactly as if Claude
+had never run, so the deterministic path stays the floor rather than the plan B.
+
+Verified against the five real Maths posts on 2026-08-03: `P3` correctly got no
+due date with "May 24 Q2" kept in the title as a paper name, `MATH INDUCTION
+SET` was marked not-a-task on "solve them if you have the time", `HW for Tuesday
+May 5` resolved to 2026-05-05 off its own posted date, and "until the end of
+June" became 2026-06-30.
+
+A post Claude cannot date still becomes a row with **no Due and no Priority**,
+which is the triage queue: a ManageBac link and no date means it needs a minute
+of your attention. Volume is about one post a week across all nine classes.
+
+Quota is personal and shared with your own sessions: 5-hour and weekly windows.
+One daily run over roughly one post is negligible, but this is the reason not to
+fan the job out or shorten the cron.
 
 **State is `managebac/seen.txt`, one integer**, committed back by the workflow
 like `f1/state.txt`. Discussion ids are a global ascending sequence, verified
