@@ -13,7 +13,7 @@
 
 *a folder, a cron, a push to your phone — repeat*
 
-![runtime](https://img.shields.io/badge/runtime-bun-e63946?style=flat-square&labelColor=111111) ![ci](https://img.shields.io/badge/runs_on-github_actions-e63946?style=flat-square&labelColor=111111) ![deps](https://img.shields.io/badge/dependencies-0-ffb703?style=flat-square&labelColor=111111) ![watchers](https://img.shields.io/badge/watchers-3-ffb703?style=flat-square&labelColor=111111) ![license](https://img.shields.io/badge/license-MIT-e63946?style=flat-square&labelColor=111111)
+![runtime](https://img.shields.io/badge/runtime-bun-e63946?style=flat-square&labelColor=111111) ![ci](https://img.shields.io/badge/runs_on-github_actions-e63946?style=flat-square&labelColor=111111) ![deps](https://img.shields.io/badge/dependencies-0-ffb703?style=flat-square&labelColor=111111) ![watchers](https://img.shields.io/badge/watchers-4-ffb703?style=flat-square&labelColor=111111) ![license](https://img.shields.io/badge/license-MIT-e63946?style=flat-square&labelColor=111111)
 
 </div>
 
@@ -71,7 +71,7 @@ The announcement and the sale are six weeks apart, which breaks `cinema`'s contr
 | 02 | **dated** | the store carries a future 2027 sale datetime — **high**, sent once, because the date is not going to change |
 | 03 | **announced** | ACM posted about tickets but no date is readable yet — **high**, sent once |
 
-Announcement matching is stateless: a post only counts inside a 45-day freshness window, so last year's `billetterie-2026-prenez-date` can never fire. The send-once rule is the one exception to this repo's no-state default — `f1/state.txt` holds a single line and gets committed back by the workflow. It is the smallest thing that works, and every stateless alternative was more code and worse behaviour. Nothing sensitive lives in it: a phase name and a public slug.
+Announcement matching is stateless: a post only counts inside a 60-day freshness window, so last year's `billetterie-2026-prenez-date` can never fire. The send-once rule is the one exception to this repo's no-state default — `f1/state.txt` holds a single line and gets committed back by the workflow. It is the smallest thing that works, and every stateless alternative was more code and worse behaviour. Nothing sensitive lives in it: a phase name and a public slug.
 
 ACM's own history sets the expectation: 2025 tickets opened end of July 2024, and 2026 was announced on 7 August 2025 with presale on 8 September. The race itself is **3-6 June 2027** — the 15-16 May 2027 date you will find everywhere is the Monaco E-Prix, which is Formula E and a different event entirely.
 
@@ -109,6 +109,8 @@ Every verdict is treated as untrusted. Anything with an unknown id, a `Type` out
 
 A post it cannot date still becomes a row with **no Due and no Priority**, which is the queue: a link with no date wants a minute of your attention. Quota is personal and shared with your own sessions, which is the reason not to shorten the cron.
 
+A dead token looks exactly like Claude reading everything and finding no dates, so the push says which one it was: posts to triage and not one surviving verdict appends `! classifier down, these are untriaged`. The token lasts a year and expires quietly, so the workflow also takes a `probe` input. Run it by hand from the Actions tab with probe on and it asks Claude for one word before touching ManageBac.
+
 "New" is one integer in `managebac/seen.txt`, committed back by the workflow. Discussion ids turn out to be a global ascending sequence: all 31 posts sorted by id land in exactly date order. It is a file rather than a lookup against Notion so that deleting a row sticks instead of being undone at 05:23 the next morning, and a first run seeds the mark and files nothing rather than importing the backlog.
 
 This repo is public, so its Actions logs are world-readable, so the job prints counts only. Assignment titles and class names go to your phone, not the log.
@@ -120,12 +122,14 @@ Deleting behaves differently on the two halves. A discussion post is gated by th
 ```bash
 git clone https://github.com/nitrimandylis/siren.git
 cd siren
-bun test              # 84 tests on the parsers, filters, diffs, markdown, and subject mapping
+bun test              # 77 tests on the parsers, filters, diffs, markdown, subject mapping, and verdict validation
 bun cinema/watch.ts   # one manual poll
 bun f1/watch.ts       # one manual check
 bun repos/sync.ts     # one manual sync
 bun managebac/sync.ts # one manual school-deadline sync
 ```
+
+The `managebac` half imports bacpack's task parser, so `bun test` and `bun managebac/sync.ts` need [bacpack](https://github.com/nitrimandylis/bacpack) at `./bacpack`. The workflow checks it out there; locally that path is a gitignored symlink to a sibling clone.
 
 To arm it, set these as GitHub Actions secrets:
 

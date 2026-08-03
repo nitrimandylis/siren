@@ -235,6 +235,17 @@ Quota is personal and shared with your own sessions: 5-hour and weekly windows.
 One daily run over roughly one post is negligible, but this is the reason not to
 fan the job out or shorten the cron.
 
+A run with posts to triage and zero surviving verdicts appends `! classifier
+down, these are untriaged` to the push. Without it, a dead token, a spent quota
+or no `claude` on PATH reads exactly like Claude having read every post and
+found no dates, and you go on triaging by hand assuming it works. It is a note
+on the push, not a thrown error: filing untriaged is still the right outcome.
+
+The token's own expiry is silent for the same reason, so `workflow_dispatch`
+takes a `probe` boolean. With it on the job asks Claude for one word before
+touching ManageBac, so a dead token fails the run instead of waiting for a
+teacher to post.
+
 **State is `managebac/seen.txt`, one integer**, committed back by the workflow
 like `f1/state.txt`. Discussion ids are a global ascending sequence, verified
 across all 31 posts sorted by id landing in exactly date order with zero
@@ -275,7 +286,8 @@ a hard failure with a clear 401, not a silent no-op. Nothing flows the other
 way — Notion to ManageBac needs a human, because ManageBac has no delete
 endpoint and a retried write double-posts to a real school record.
 
-Secrets: `NTFY_TOPIC`, `NOTION_API_KEY`, `MANAGEBAC_SCHOOL`, `MANAGEBAC_COOKIE`.
+Secrets: `NTFY_TOPIC`, `NOTION_API_KEY`, `MANAGEBAC_SCHOOL`, `MANAGEBAC_COOKIE`,
+and `CLAUDE_CODE_OAUTH_TOKEN` (optional: without it posts file untriaged).
 Needs `contents: write` for the watermark.
 
 ### `keepalive` — monthly heartbeat
