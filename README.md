@@ -113,6 +113,8 @@ A post it cannot date still becomes a row with **no Due and no Priority**, which
 
 This repo is public, so its Actions logs are world-readable, so the job prints counts only. Assignment titles and class names go to your phone, not the log.
 
+Deleting behaves differently on the two halves. A discussion post is gated by the watermark, so deleting its row is permanent. A deadline row is not: that half is a reconciler whose only state is the links already in Notion, so a deleted one looks new and comes back tomorrow. Mark it **Done** instead, which keeps the link and suppresses it for good. You will want this on day one, because teachers post the same deadline twice under slightly different titles and bacpack deliberately refuses to fuzzy-match them.
+
 ## 🚀 Run it
 
 ```bash

@@ -256,6 +256,19 @@ Known ceilings: the discussions page shows five posts and paginates behind a
 then posts six times in a day would lose the oldest. Row names come straight
 from the post title, so three of them will say `Homework` until you rename them.
 
+**Deleting works differently on the two halves.** A discussion post is gated by
+the watermark, so deleting its row is permanent. A deadline row is not: the
+tasks half is a pure reconciler whose only state is the links already in Notion,
+so deleting one just makes the task look new and it returns the next morning.
+Mark it `Done` instead. A Done row keeps its `ManageBac` link, which is all
+`planSync` looks at, so it stays suppressed for good.
+
+This matters immediately, because ManageBac's first two rows are the same
+deadline twice: `IA first draft` and `IA FIRST DRAFT DEADLINE`, both Maths, both
+2026-09-20, posted by the teacher as two events with different ids and times.
+bacpack refuses to dedupe those (fuzzy title matching would hide real work), so
+one of them wants marking Done by hand.
+
 Known ceilings: undated tasks are skipped, since the database sorts on Due and a
 row without one does not surface. The cookie lasts about a year and its death is
 a hard failure with a clear 401, not a silent no-op. Nothing flows the other
