@@ -1,6 +1,17 @@
 import { expect, test } from "bun:test";
-import { dayOf, idFrom, planSync, subjectFor, type Row } from "./sync";
+import {
+  dayOf,
+  dedupePosts,
+  highestId,
+  idFrom,
+  newPosts,
+  noteFor,
+  planSync,
+  subjectFor,
+  type Row,
+} from "./sync";
 import type { Task } from "../bacpack/src/due.ts";
+import type { Discussion } from "../bacpack/src/classes.ts";
 
 function task(url: string, due: Date | null, subject = "IB Computer Science HL"): Task {
   return { title: "t", subject, when: "Sep 20", due, badges: [], action: null, url };
@@ -64,4 +75,63 @@ test("planSync leaves an unmoved task alone and skips undated ones", () => {
     rows,
   );
   expect(plan).toEqual({ create: [], touch: [] });
+});
+
+function post(id: string, category: string | null = "Homework"): Discussion {
+  return {
+    id,
+    title: `post ${id}`,
+    author: "A Teacher",
+    category,
+    postedAt: new Date(2026, 4, 19),
+    posted: "Tuesday, May 19, 2026 at 12:21 AM",
+    body: "do the exercises",
+    url: `/student/classes/1/discussions/${id}`,
+  };
+}
+
+// The first run must seed rather than import: eight months of backlog arriving
+// as untriaged rows is worse than nothing.
+test("newPosts files nothing on a first run, then only what is newer", () => {
+  const all = [post("300"), post("200"), post("100")];
+
+  expect(newPosts(all, null)).toEqual([]);
+  expect(newPosts(all, 200).map((p) => p.id)).toEqual(["300"]);
+  expect(newPosts(all, 300)).toEqual([]);
+});
+
+// The mark has to move even when nothing was filed, or a first run seeds
+// nothing and the next run imports the whole backlog anyway.
+test("highestId advances on a seeding run and never goes backwards", () => {
+  expect(highestId([post("300"), post("100")], null)).toBe(300);
+  expect(highestId([post("100")], 500)).toBe(500);
+  expect(highestId([], 500)).toBe(500);
+  expect(highestId([], null)).toBe(0);
+});
+
+test("noteFor leads with what you triage on, and says when a category is missing", () => {
+  expect(noteFor(post("1"))).toBe(
+    "Homework · A Teacher · Tuesday, May 19, 2026 at 12:21 AM\n\ndo the exercises",
+  );
+  expect(noteFor(post("1", null))).toContain("uncategorised ·");
+});
+
+test("noteFor stays inside Notion's 2000 character text run limit", () => {
+  const long = { ...post("1"), body: "x".repeat(5000) };
+  expect(noteFor(long).length).toBeLessThanOrEqual(2000);
+});
+
+test("dedupePosts collapses a cross-post but keeps same-titled posts apart", () => {
+  const at = (t: string, title: string, id: string) => ({
+    post: { ...post(id), title, posted: t },
+    className: "c",
+  });
+  const items = [
+    at("Mon, Jun 29, 2026 at 9:06 AM", "Retake exams", "2"), // cross-posted to
+    at("Mon, Jun 29, 2026 at 9:06 AM", "Retake exams", "1"), // two CS classes
+    at("Tue, May 19, 2026 at 12:21 AM", "Homework", "3"),
+    at("Fri, May 1, 2026 at 5:52 PM", "Homework", "4"), // same title, real post
+  ];
+
+  expect(dedupePosts(items).map((i) => i.post.id)).toEqual(["2", "3", "4"]);
 });

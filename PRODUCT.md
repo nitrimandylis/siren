@@ -182,6 +182,47 @@ The cookie is written to `~/.config/managebac/cookie` by the workflow because
 that is the only place bacpack's client reads it from. `printf`, not `echo`, so
 it never reaches the log even before GitHub masks it.
 
+## Discussions, which is where the homework actually is
+
+Tasks & Deadlines is only the formal stuff: it held **2** items where the class
+discussion pages held **31** across eight months. Most homework is set in a
+discussion post, so the watcher reads those too.
+
+It cannot classify them, and does not try. Teachers fill the category field in
+about half the time (16 of 31 posts, only 5 of them `Homework`), and the highest
+stakes post in the set, the Maths IA first-draft deadline, is filed under
+`Announcements`. The due date is never a field, it is prose, and the prose is
+adversarial: `HW for Tuesday May 5` carries its date in the title, `Solve from
+May 24, question 2` names a past paper rather than a deadline, and `solve them
+if you have the time` is not a task at all. Any regex over that files real work
+on invented dates.
+
+So every new post becomes a row with **no Due and no Priority**, which is the
+triage queue: a ManageBac link and no date means you have not read it yet. You
+set the date, or you delete the row. Volume is about one post a week across all
+nine classes, so triage is a minute.
+
+**State is `managebac/seen.txt`, one integer**, committed back by the workflow
+like `f1/state.txt`. Discussion ids are a global ascending sequence, verified
+across all 31 posts sorted by id landing in exactly date order with zero
+inversions, so "new" is one comparison. It is a file and not a Notion lookup on
+purpose: if "already filed" meant "a row with this link exists", deleting a post
+you judged not to be homework would bring it back the next morning. Deleting has
+to stick.
+
+**A first run seeds and files nothing.** Importing eight months of backlog as
+untriaged rows would make deleting all of them the first job.
+
+Cross-posts are collapsed on title plus exact timestamp. The same CS
+announcement goes to both Computer Science classes as two separate records with
+two ids, so the watermark cannot catch it. The timestamp has to be in the key
+because Global Politics has three distinct posts all titled `Homework`.
+
+Known ceilings: the discussions page shows five posts and paginates behind a
+"Show More" whose route is not mapped, so a class that goes quiet for a term and
+then posts six times in a day would lose the oldest. Row names come straight
+from the post title, so three of them will say `Homework` until you rename them.
+
 Known ceilings: undated tasks are skipped, since the database sorts on Due and a
 row without one does not surface. The cookie lasts about a year and its death is
 a hard failure with a clear 401, not a silent no-op. Nothing flows the other
@@ -189,6 +230,7 @@ way — Notion to ManageBac needs a human, because ManageBac has no delete
 endpoint and a retried write double-posts to a real school record.
 
 Secrets: `NTFY_TOPIC`, `NOTION_API_KEY`, `MANAGEBAC_SCHOOL`, `MANAGEBAC_COOKIE`.
+Needs `contents: write` for the watermark.
 
 ### `keepalive` — monthly heartbeat
 

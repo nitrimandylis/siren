@@ -8,9 +8,21 @@
 // Needs MANAGEBAC_SCHOOL, a session cookie at ~/.config/managebac/cookie, and
 // NOTION_TOKEN (internal integration with the database shared to it).
 
+import { readFileSync, writeFileSync } from "node:fs";
+import { listClasses } from "../bacpack/src/client.ts";
+import { listDiscussions, type Discussion } from "../bacpack/src/classes.ts";
 import { fetchTasks, type Task } from "../bacpack/src/due.ts";
 import { ping } from "../ntfy";
 import { notion } from "../notion";
+
+// Discussion ids are a global ascending sequence: 31 posts spanning Oct 2025 to
+// Jun 2026 across nine classes sorted by id in exactly date order, with no
+// inversions. So "what is new" is one integer rather than a per-class list.
+const SEEN_PATH = new URL("seen.txt", import.meta.url).pathname;
+
+// Notes is a rich_text property and a single text run tops out at 2000
+// characters. No post has come close, but a truncated note beats a failed run.
+const MAX_NOTE = 1900;
 
 const DATABASE_ID = "223cc494-686e-41c4-a564-ae020263974e";
 const DATABASE_URL = "https://www.notion.so/223cc494686e41c4a564ae020263974e";
@@ -109,6 +121,57 @@ export function summarize(plan: Plan): string {
   return lines.join("\n");
 }
 
+// The watermark is a file rather than state read back out of Notion, and that
+// is the whole point. If "already synced" meant "a row with this link exists",
+// then deleting a post you decided was not homework would bring it back the
+// next morning. Deleting has to be a decision that sticks.
+export function readSeen(): number | null {
+  try {
+    const value = Number(readFileSync(SEEN_PATH, "utf8").trim());
+    return Number.isFinite(value) ? value : null;
+  } catch {
+    return null; // first run
+  }
+}
+
+// A first run must not import the whole backlog: eight months of posts would
+// arrive as a wall of untriaged rows and the first thing you would do is delete
+// all of them. Seed the mark, file nothing, start watching from now.
+export function newPosts(posts: Discussion[], seen: number | null): Discussion[] {
+  if (seen === null) return [];
+  return posts.filter((post) => Number(post.id) > seen);
+}
+
+// The same announcement cross-posted to two classes is two separate records
+// with two ids, so the watermark cannot collapse them. Title plus the exact
+// posted timestamp can: a genuine pair of posts is never simultaneous, while
+// Global Politics has three distinct posts all titled "Homework", which is why
+// the timestamp has to be part of the key.
+export function dedupePosts<T extends { post: Discussion }>(items: T[]): T[] {
+  const seen = new Set<string>();
+  const out: T[] = [];
+  for (const item of items) {
+    const key = `${item.post.title}\u0000${item.post.posted}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(item);
+  }
+  return out;
+}
+
+export function highestId(posts: Discussion[], seen: number | null): number {
+  return posts.reduce((max, post) => Math.max(max, Number(post.id)), seen ?? 0);
+}
+
+// Category and author lead the note because they are what you triage on, and
+// the category is often absent, which is itself worth seeing.
+export function noteFor(post: Discussion): string {
+  const header = [post.category ?? "uncategorised", post.author, post.posted]
+    .filter(Boolean)
+    .join(" · ");
+  return `${header}\n\n${post.body}`.slice(0, MAX_NOTE);
+}
+
 async function notionRows(token: string): Promise<Row[]> {
   const rows: Row[] = [];
   let cursor: string | undefined = undefined;
@@ -151,6 +214,24 @@ async function createRow(token: string, task: Task, school: string) {
   });
 }
 
+// Deliberately unlike createRow: no Due and no Priority. A deadline arrives
+// already scheduled, a discussion post does not, and the due date is prose
+// ("HW for Tuesday May 5", or "May 24" meaning the name of a past paper, or
+// nothing at all). Guessing it here is how a row gets filed a week early. The
+// empty cells are the triage queue: link but no date means you have not read it.
+async function createPostRow(token: string, post: Discussion, className: string, school: string) {
+  await notion("POST", "/pages", token, {
+    parent: { database_id: DATABASE_ID },
+    properties: {
+      Task: { title: [{ text: { content: post.title || "(untitled post)" } }] },
+      Subject: { select: { name: subjectFor(className) } },
+      Status: { select: { name: "To Do" } },
+      ManageBac: { url: `https://${school}.managebac.com${post.url}` },
+      Notes: { rich_text: [{ text: { content: noteFor(post) } }] },
+    },
+  });
+}
+
 async function touchRow(token: string, pageId: string, due: string) {
   await notion("PATCH", `/pages/${pageId}`, token, {
     properties: { Due: { date: { start: due } } },
@@ -175,14 +256,46 @@ async function main() {
     await Bun.sleep(350);
   }
 
+  // Discussions, which is where most homework actually gets set. Sequential
+  // rather than Promise.all: ManageBac is a Rails app that answers 422 when
+  // pushed, and ten pages once a day is not worth the risk.
+  const seen = readSeen();
+  const posts: { post: Discussion; className: string }[] = [];
+  for (const klass of await listClasses()) {
+    for (const post of await listDiscussions(klass.id)) {
+      posts.push({ post, className: klass.name });
+    }
+  }
+  const fresh = newPosts(
+    posts.map((p) => p.post),
+    seen,
+  );
+  const freshIds = new Set(fresh.map((p) => p.id));
+  const filing = dedupePosts(posts.filter((p) => freshIds.has(p.post.id)));
+
+  for (const { post, className } of filing) {
+    await createPostRow(token, post, className, school);
+    await Bun.sleep(350);
+  }
+  writeFileSync(SEEN_PATH, `${highestId(posts.map((p) => p.post), seen)}\n`);
+
   // This repo is public, so its Actions logs are world-readable: counts only,
   // never assignment titles or class names. The names go to the phone instead.
-  console.log(`${tasks.length} upcoming, ${plan.create.length} added, ${plan.touch.length} moved`);
+  console.log(
+    `${tasks.length} upcoming, ${plan.create.length} added, ${plan.touch.length} moved, ` +
+      `${posts.length} posts seen, ${filing.length} filed${seen === null ? " (first run, seeded)" : ""}`,
+  );
 
-  if (plan.create.length + plan.touch.length === 0) return;
+  const changed = plan.create.length + plan.touch.length + filing.length;
+  if (changed === 0) return;
   await ping({
-    title: `ManageBac: ${plan.create.length} new, ${plan.touch.length} moved`,
-    body: summarize(plan),
+    title: `ManageBac: ${plan.create.length + filing.length} new, ${plan.touch.length} moved`,
+    body: [
+      summarize(plan),
+      ...filing.map(({ post }) => `? ${post.title} (${post.category ?? "uncategorised"})`),
+    ]
+      .filter(Boolean)
+      .join("\n"),
     tags: "books",
     click: DATABASE_URL,
   });
