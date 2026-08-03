@@ -292,6 +292,15 @@ async function main() {
   const filing = candidates.filter(({ post }) => verdicts.get(post.id)?.task !== false);
   const dropped = candidates.length - filing.length;
 
+  // Posts to triage but not one usable verdict means the classifier did not
+  // run: no claude on PATH, a dead token, a spent quota, unparseable output.
+  // Without saying so, that is indistinguishable from Claude having read them
+  // and found no dates, and you would go on triaging by hand assuming it was
+  // working. It is a note on the push, not a thrown error: filing untriaged is
+  // still the right outcome.
+  const classifierDown = candidates.length > 0 && verdicts.size === 0;
+  if (classifierDown) console.log("classifier returned nothing, rows filed untriaged");
+
   for (const { post, className } of filing) {
     await createPostRow(token, post, className, school, verdicts.get(post.id));
     await Bun.sleep(350);
@@ -315,6 +324,7 @@ async function main() {
         const v = verdicts.get(post.id);
         return `${v?.due ? "+" : "?"} ${v?.title ?? post.title}${v?.due ? ` -> ${v.due}` : ""}`;
       }),
+      classifierDown ? "\n! classifier down, these are untriaged" : "",
     ]
       .filter(Boolean)
       .join("\n"),
