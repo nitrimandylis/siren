@@ -51,7 +51,7 @@ test("planSync creates unknown tasks and refreshes moved ones", () => {
     rows,
   );
   expect(plan.create.map((t) => idFrom(t.url))).toEqual(["222"]);
-  expect(plan.touch).toEqual([{ pageId: "p1", title: "111", due: "2026-09-27" }]);
+  expect(plan.touch).toEqual([{ pageId: "p1", title: "t", due: "2026-09-27" }]);
 });
 
 test("planSync leaves an unmoved task alone and skips undated ones", () => {

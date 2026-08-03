@@ -92,7 +92,7 @@ export function planSync(tasks: Task[], rows: Row[]): Plan {
     if (row === undefined) {
       plan.create.push(task);
     } else if (row.due !== due) {
-      plan.touch.push({ pageId: row.pageId, title: row.taskId, due });
+      plan.touch.push({ pageId: row.pageId, title: task.title, due });
     }
   }
   return plan;
@@ -104,7 +104,7 @@ export function summarize(plan: Plan): string {
     lines.push(`+ ${task.title} (${subjectFor(task.subject)}, ${task.when})`);
   }
   for (const touched of plan.touch) {
-    lines.push(`~ moved -> ${touched.due}`);
+    lines.push(`~ ${touched.title} -> ${touched.due}`);
   }
   return lines.join("\n");
 }
