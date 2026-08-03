@@ -2,5 +2,8 @@
 node_modules/
 .DS_Store
 
-# bacpack is checked out here by the managebac workflow, not vendored.
-bacpack/
+# bacpack is checked out here by the managebac workflow, not vendored. No
+# trailing slash: locally this path is a symlink to a sibling clone, and
+# "bacpack/" matches a directory only, so the symlink got committed and the
+# runner's checkout then failed to mkdir over it.
+bacpack
