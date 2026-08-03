@@ -97,6 +97,12 @@ Rows are matched on a `ManageBac` URL property, keyed on the trailing task id ra
 
 Class names carry group and year suffixes that churn every September, so they are matched by substring against the database's own subject vocabulary. A class the table does not recognise lands in `Other`, and since the push names the subject of every row it files, a September rename shows up as a run of `Other` on your phone rather than as silence.
 
+Tasks & Deadlines is only half the story, and the smaller half: it held 2 items where the class discussion pages held 31 over eight months. Most homework gets set in a discussion post, so those are read too.
+
+Nothing tries to classify them. Teachers fill the category field about half the time, the highest-stakes post in the set is filed under `Announcements` rather than `Homework`, and the due date is always prose: `HW for Tuesday May 5` puts it in the title, `Solve from May 24, question 2` names a past paper instead of a deadline, and `solve them if you have the time` is not a task at all. So a new post becomes a row with **no Due and no Priority**. A link with no date is the queue, and you either set the date or delete the row. That runs at about one post a week across nine classes.
+
+"New" is one integer in `managebac/seen.txt`, committed back by the workflow. Discussion ids turn out to be a global ascending sequence: all 31 posts sorted by id land in exactly date order. It is a file rather than a lookup against Notion so that deleting a row sticks instead of being undone at 05:23 the next morning, and a first run seeds the mark and files nothing rather than importing the backlog.
+
 This repo is public, so its Actions logs are world-readable, so the job prints counts only. Assignment titles and class names go to your phone, not the log.
 
 ## 🚀 Run it
