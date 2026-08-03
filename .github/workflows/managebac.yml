@@ -1,0 +1,33 @@
+name: managebac
+
+on:
+  schedule:
+    - cron: "23 5 * * *" # daily before school, offset from :00
+  workflow_dispatch:
+
+jobs:
+  managebac:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7
+        with:
+          repository: nitrimandylis/bacpack
+          path: bacpack
+      - uses: oven-sh/setup-bun@v2
+
+      # bacpack reads the session from this file and nowhere else, so the
+      # secret is written to disk rather than passed as an env var. printf, not
+      # echo, so nothing lands in the log even before GitHub masks it.
+      - run: |
+          mkdir -p ~/.config/managebac
+          printf '%s' "$MANAGEBAC_COOKIE" > ~/.config/managebac/cookie
+          chmod 600 ~/.config/managebac/cookie
+        env:
+          MANAGEBAC_COOKIE: ${{ secrets.MANAGEBAC_COOKIE }}
+
+      - run: bun managebac/sync.ts
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          NOTION_TOKEN: ${{ secrets.NOTION_API_KEY }}
+          MANAGEBAC_SCHOOL: ${{ secrets.MANAGEBAC_SCHOOL }}

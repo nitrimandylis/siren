@@ -87,15 +87,28 @@ The body belongs to the sync, not to you. A `README synced` date property record
 
 This repo is public, so its Actions logs are world-readable — the job prints counts only. The repo names go to your phone, not the log.
 
+## 🎒 `managebac` — school deadlines into Notion
+
+ManageBac is where the deadlines are posted and Notion is where the work actually gets planned, so once a day this walks the Tasks & Deadlines list and files anything new as a row in the Notion Assignments database.
+
+The scraping is not here. It lives in [bacpack](https://github.com/nitrimandylis/bacpack), a ManageBac CLI that deliberately does not know Notion exists. The workflow checks it out alongside this repo and imports its task parser. This folder is the glue, and the glue is the part that has opinions.
+
+Rows are matched on a `ManageBac` URL property, keyed on the trailing task id rather than the whole URL, because the class id in the middle of it is reissued every September. `Type` is left blank (Homework vs Assessment vs IA is a judgement call) and `Priority` defaults to Medium, so a new row reads as unranked rather than unseen. Once a row exists, only `Due` is ever refreshed: the title and status belong to you, and a task dropping off ManageBac's upcoming list means it passed, not that the row should go.
+
+Class names carry group and year suffixes that churn every September, so they are matched by substring against the database's own subject vocabulary. A class the table does not recognise lands in `Other`, and since the push names the subject of every row it files, a September rename shows up as a run of `Other` on your phone rather than as silence.
+
+This repo is public, so its Actions logs are world-readable, so the job prints counts only. Assignment titles and class names go to your phone, not the log.
+
 ## 🚀 Run it
 
 ```bash
 git clone https://github.com/nitrimandylis/siren.git
 cd siren
-bun test              # 46 tests on the parsers, filters, diff, and markdown
+bun test              # 84 tests on the parsers, filters, diffs, markdown, and subject mapping
 bun cinema/watch.ts   # one manual poll
 bun f1/watch.ts       # one manual check
 bun repos/sync.ts     # one manual sync
+bun managebac/sync.ts # one manual school-deadline sync
 ```
 
 To arm it, set these as GitHub Actions secrets:
@@ -104,7 +117,9 @@ To arm it, set these as GitHub Actions secrets:
 |---|---|---|
 | `NTFY_TOPIC` | all | your ntfy topic — pick something unguessable like `odyssey-imax-x7k2f9`, then subscribe to it in the ntfy app |
 | `GH_PAT` | `repos` | classic token with `repo` scope, so private repos are visible |
-| `NOTION_API_KEY` | `repos` | internal integration token, with the database shared to that integration |
+| `NOTION_API_KEY` | `repos`, `managebac` | internal integration token, with the database shared to that integration |
+| `MANAGEBAC_SCHOOL` | `managebac` | the subdomain of your school's ManageBac: `acme` for `acme.managebac.com` |
+| `MANAGEBAC_COOKIE` | `managebac` | your `_managebac_session` cookie, copied out of the browser. It lasts about a year, then the job starts failing |
 
 GitHub disables schedules after 60 days without commits, which is exactly how a watcher armed in July turns out to be dead in December. The `keepalive` workflow pushes an empty commit on the 1st of each month to reset that clock, then pings your current watch list — so the monthly notification is also your only proof the thing is still armed and still hunting what you think it is.
 
@@ -122,7 +137,8 @@ flowchart LR
 |---|---|---|
 | push | `ntfy.ts` | the one place `NTFY_TOPIC` is read — every watcher sends through it |
 | http | `retry.ts` | every outbound call goes through it: retries 429 and 5xx so one Cloudflare blip does not fail a run |
-| watcher | `cinema/`, `f1/`, `repos/` | one folder each, self-contained, no shared state (f1 keeps one line in `state.txt`) |
+| notion | `notion.ts` | the one place the Notion API version is pinned. `repos` and `managebac` both write through it |
+| watcher | `cinema/`, `f1/`, `repos/`, `managebac/` | one folder each, self-contained, no shared state (f1 keeps one line in `state.txt`) |
 | markdown | `repos/markdown.ts` | markdown → Notion blocks, because the API refuses markdown |
 | cron | `.github/workflows/*.yml` | one workflow per watcher, own schedule, offset from `:00` because github delays on-the-hour jobs |
 | keepalive | `keepalive.ts` | monthly empty commit so github never disables the schedules, plus a "still armed" ping listing every watcher |

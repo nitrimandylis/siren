@@ -1,5 +1,6 @@
 import { afterAll, expect, test } from "bun:test";
-import { dayOf, needsRebuild, notion, planSync, stackFor, summarize, type Repo, type Row } from "./sync";
+import { notion } from "../notion";
+import { dayOf, needsRebuild, planSync, stackFor, summarize, type Repo, type Row } from "./sync";
 
 function row(overrides: Partial<Row> = {}): Row {
   return { pageId: "p1", name: "cine", repoId: 1, lastPushed: null, readmeSynced: null, ...overrides };

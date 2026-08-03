@@ -7,6 +7,7 @@ my phone.
 ## Layout
 
 - `ntfy.ts` — shared push helper, the one place `NTFY_TOPIC` is read.
+- `notion.ts` — shared Notion client, the one place the API version is pinned.
 - `<watcher>/` — one folder per watcher, self-contained.
 - `.github/workflows/<watcher>.yml` — one workflow per watcher, its own cron.
 
@@ -141,6 +142,54 @@ on-sale instant. Set a real alarm from the date it reports.
 
 Secrets: `NTFY_TOPIC`.
 
+### `managebac` — Notion Assignments sync
+
+Daily walk of ManageBac's Tasks & Deadlines into the Notion Assignments
+database. The scraping is not here: it lives in `bacpack`, which the workflow
+checks out alongside this repo and imports `fetchTasks` from. bacpack is
+deliberately ignorant of Notion, so this folder is the glue it refuses to be.
+
+Matched on a `ManageBac` URL property, keyed on the **trailing** task id rather
+than the whole URL. ManageBac task URLs look like
+`/student/classes/12914478/events/48354386` and the class id in the middle is
+reissued every September, so keying on the whole URL would fork every row
+annually. Keying on the title would fork on the first edit, since assignment
+titles get rewritten to be actionable the moment a row lands.
+
+Create-and-refresh only, never delete and never overwrite judgement. `Type` is
+left blank (Homework vs Assessment vs IA cannot be guessed) and `Priority`
+defaults to Medium so a new row reads as unranked rather than unseen. Once a row
+exists only `Due` is touched: Status, Task and Priority belong to Nick. A task
+falling off ManageBac's upcoming list means it passed, not that the row goes.
+
+Class names are matched by lowercased substring against the database's own
+subject vocabulary, first match wins, unmapped lands in `Other`. All nine real class
+names were checked against the table on 2026-08-03. They are not in the repo:
+siren is public and a class list is a timetable, the same reason bacpack's
+examples never name the school. `sync.test.ts` pins reworded versions that keep each
+name's awkward shape, and the real list lives in project memory.
+
+Nothing detects a September rename automatically. The table just stops matching
+and the rows land in `Other`, which is visible because the push names the
+subject of every row it files. `tok` is last in the table because three letters
+can hide inside a longer word.
+
+Dates use local components rather than `toISOString`. bacpack builds the Date
+from ManageBac's wall-clock text, so a midnight deadline read from Athens
+converts back to the previous day in UTC and quietly moves the deadline.
+
+The cookie is written to `~/.config/managebac/cookie` by the workflow because
+that is the only place bacpack's client reads it from. `printf`, not `echo`, so
+it never reaches the log even before GitHub masks it.
+
+Known ceilings: undated tasks are skipped, since the database sorts on Due and a
+row without one does not surface. The cookie lasts about a year and its death is
+a hard failure with a clear 401, not a silent no-op. Nothing flows the other
+way — Notion to ManageBac needs a human, because ManageBac has no delete
+endpoint and a retried write double-posts to a real school record.
+
+Secrets: `NTFY_TOPIC`, `NOTION_API_KEY`, `MANAGEBAC_SCHOOL`, `MANAGEBAC_COOKIE`.
+
 ### `keepalive` — monthly heartbeat
 
 Not a watcher. GitHub disables every schedule in a repo after 60 days with no
@@ -158,8 +207,8 @@ one part that goes stale. Ceiling: a workflow file on disk means "scheduled",
 not "still enabled" — checking the latter needs the Actions API and a token,
 which is the thing keepalive exists to make unnecessary.
 
-Unverified: whether a push made with the built-in `GITHUB_TOKEN` resets the
-60-day clock. If schedules get disabled anyway, check out with `GH_PAT`.
+Verified 2026-07-31: a push made with the built-in `GITHUB_TOKEN` does reset
+the 60-day clock. No need to check out with `GH_PAT`.
 
 Secrets: `NTFY_TOPIC`.
 

@@ -7,13 +7,13 @@
 
 import { ping } from "../ntfy";
 import { fetchRetry } from "../retry";
+import { notion } from "../notion";
 import { toBlocks } from "./markdown";
 
 const OWNER = "nitrimandylis";
 const MAX_BODY_BLOCKS = 300; // ponytail: long READMEs get cut, raise if one ever does
 const DATABASE_ID = "cb1788bf-2a1d-4a7e-b3e4-6b5daea238a8";
 const DATABASE_URL = "https://www.notion.so/cb1788bf2a1d4a7eb3e46b5daea238a8";
-const NOTION_VERSION = "2022-06-28";
 
 // Repos that exist on GitHub but are not projects.
 const IGNORED = new Set(["nitrimandylis"]); // the profile README repo
@@ -125,25 +125,6 @@ async function githubRepos(token: string): Promise<Repo[]> {
     if (batch.length < 100) return repos;
     page++;
   }
-}
-
-export async function notion(method: string, path: string, token: string, body?: unknown) {
-  const response = await fetchRetry(`https://api.notion.com/v1${path}`, {
-    method,
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Notion-Version": NOTION_VERSION,
-      "Content-Type": "application/json",
-    },
-    body: body === undefined ? undefined : JSON.stringify(body),
-  });
-  if (!response.ok) {
-    // The body is truncated because Cloudflare error pages are whole HTML
-    // documents and they drown the Actions log.
-    const detail = (await response.text()).slice(0, 300);
-    throw new Error(`Notion ${path} returned HTTP ${response.status}: ${detail}`);
-  }
-  return response.json();
 }
 
 async function notionRows(token: string): Promise<Row[]> {
