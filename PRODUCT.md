@@ -178,9 +178,11 @@ Dates use local components rather than `toISOString`. bacpack builds the Date
 from ManageBac's wall-clock text, so a midnight deadline read from Athens
 converts back to the previous day in UTC and quietly moves the deadline.
 
-The cookie is written to `~/.config/managebac/cookie` by the workflow because
-that is the only place bacpack's client reads it from. `printf`, not `echo`, so
-it never reaches the log even before GitHub masks it.
+Auth is a login, not a stored cookie. `MANAGEBAC_EMAIL` and `MANAGEBAC_PASSWORD`
+go straight to bacpack as environment variables, and it logs itself in and
+caches the session. A runner starts empty, so that is one login per run. The
+`MANAGEBAC_COOKIE` secret this job used until 2026-08-14 is gone: a session
+lapses after about a fortnight, and the job had been failing since it did.
 
 ## Discussions, which is where the homework actually is
 
@@ -209,9 +211,9 @@ array and `sync.ts` does every write. That is the right shape anyway: the write
 path is already built, rate-limited and tested, and the model's answer is
 visible in the log before it becomes a row.
 
-It gets no tools at all (`--disallowed-tools`). The runner has the ManageBac
-session cookie on disk and the logs are world-readable, so a classifier with
-Bash is a bad trade for a job that needs no tools.
+It gets no tools at all (`--disallowed-tools`). The runner holds the ManageBac
+password in its environment and the logs are world-readable, so a classifier
+with Bash is a bad trade for a job that needs no tools.
 
 **Everything it returns is untrusted.** `validate()` drops any entry with an id
 that was never sent, a non-boolean `task`, a `Type` or `Priority` outside the
@@ -281,13 +283,15 @@ bacpack refuses to dedupe those (fuzzy title matching would hide real work), so
 one of them wants marking Done by hand.
 
 Known ceilings: undated tasks are skipped, since the database sorts on Due and a
-row without one does not surface. The cookie lasts about a year and its death is
-a hard failure with a clear 401, not a silent no-op. Nothing flows the other
+row without one does not surface. A lapsed session is no longer a failure at
+all, because bacpack logs in again; a rejected login is, and it pushes to ntfy
+rather than only emailing. Nothing flows the other
 way — Notion to ManageBac needs a human, because ManageBac has no delete
 endpoint and a retried write double-posts to a real school record.
 
-Secrets: `NTFY_TOPIC`, `NOTION_API_KEY`, `MANAGEBAC_SCHOOL`, `MANAGEBAC_COOKIE`,
-and `CLAUDE_CODE_OAUTH_TOKEN` (optional: without it posts file untriaged).
+Secrets: `NTFY_TOPIC`, `NOTION_API_KEY`, `MANAGEBAC_SCHOOL`, `MANAGEBAC_EMAIL`,
+`MANAGEBAC_PASSWORD`, and `CLAUDE_CODE_OAUTH_TOKEN` (optional: without it posts
+file untriaged).
 Needs `contents: write` for the watermark.
 
 ### `keepalive` — monthly heartbeat

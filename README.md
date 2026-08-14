@@ -103,13 +103,15 @@ No regex can classify them. Teachers fill the category field about half the time
 
 So Claude reads them, in the workflow, on a `CLAUDE_CODE_OAUTH_TOKEN` from `claude setup-token`. That is auth precedence #5 and bills your subscription rather than an API key. **Never set `ANTHROPIC_API_KEY` in the same job** — it is precedence #3, wins silently, and sends the wrong header.
 
-That token can only make model requests, so claude.ai connectors are unavailable and Claude cannot reach Notion even in principle. It returns JSON and the script does every write. It also gets no tools at all: the runner has a session cookie on disk and world-readable logs, so a classifier with `Bash` is a bad trade for a job that needs none.
+That token can only make model requests, so claude.ai connectors are unavailable and Claude cannot reach Notion even in principle. It returns JSON and the script does every write. It also gets no tools at all: the runner holds a ManageBac password in its environment and its logs are world-readable, so a classifier with `Bash` is a bad trade for a job that needs none.
 
 Every verdict is treated as untrusted. Anything with an unknown id, a `Type` outside the database's vocabulary, or a due date landing before the post was written or more than a year after it gets dropped, and a dropped verdict files untriaged exactly as if Claude had never run. The deterministic path is the floor, not the fallback. On the five real Maths posts it got all five right, including refusing to read "May 24" as a deadline.
 
 A post it cannot date still becomes a row with **no Due and no Priority**, which is the queue: a link with no date wants a minute of your attention. Quota is personal and shared with your own sessions, which is the reason not to shorten the cron.
 
 A dead token looks exactly like Claude reading everything and finding no dates, so the push says which one it was: posts to triage and not one surviving verdict appends `! classifier down, these are untriaged`. The token lasts a year and expires quietly, so the workflow also takes a `probe` input. Run it by hand from the Actions tab with probe on and it asks Claude for one word before touching ManageBac.
+
+There is no session cookie to keep alive. The job passes your login to bacpack, which signs in and caches the session itself, because a ManageBac session dies after about a fortnight whatever the year-long expiry on its cookie says. That fortnight used to be a fortnight of silent failure, so a failed run now pushes to ntfy instead of only sending GitHub's email.
 
 "New" is one integer in `managebac/seen.txt`, committed back by the workflow. Discussion ids turn out to be a global ascending sequence: all 31 posts sorted by id land in exactly date order. It is a file rather than a lookup against Notion so that deleting a row sticks instead of being undone at 05:23 the next morning, and a first run seeds the mark and files nothing rather than importing the backlog.
 
@@ -139,7 +141,8 @@ To arm it, set these as GitHub Actions secrets:
 | `GH_PAT` | `repos` | classic token with `repo` scope, so private repos are visible |
 | `NOTION_API_KEY` | `repos`, `managebac` | internal integration token, with the database shared to that integration |
 | `MANAGEBAC_SCHOOL` | `managebac` | the subdomain of your school's ManageBac: `acme` for `acme.managebac.com` |
-| `MANAGEBAC_COOKIE` | `managebac` | your `_managebac_session` cookie, copied out of the browser. It lasts about a year, then the job starts failing |
+| `MANAGEBAC_EMAIL` | `managebac` | the email you log in to ManageBac with |
+| `MANAGEBAC_PASSWORD` | `managebac` | the matching password. bacpack logs in per run, because a stored session dies after about a fortnight |
 | `CLAUDE_CODE_OAUTH_TOKEN` | `managebac` | one-year token from `claude setup-token`, needs a Pro/Max/Team plan. Optional: without it, posts file untriaged |
 
 GitHub disables schedules after 60 days without commits, which is exactly how a watcher armed in July turns out to be dead in December. The `keepalive` workflow pushes an empty commit on the 1st of each month to reset that clock, then pings your current watch list — so the monthly notification is also your only proof the thing is still armed and still hunting what you think it is.
