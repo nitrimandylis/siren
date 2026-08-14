@@ -75,3 +75,21 @@ jobs:
             git pull --rebase -q
             git push
           fi
+
+      # A failure here is almost always the session cookie dying, and it lasts
+      # about two weeks, not the year its expires attribute claims. Without this
+      # the only signal is GitHub's failure email. Runs through ntfy.ts so the
+      # topic is still read in exactly one place.
+      - if: failure()
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          bun -e 'import { ping } from "./ntfy";
+          await ping({
+            title: "managebac sync failed",
+            body: "Usually the session cookie. Refresh ~/.config/managebac/cookie, then gh secret set MANAGEBAC_COOKIE.",
+            priority: "high",
+            tags: "rotating_light",
+            click: process.env.RUN_URL,
+          })'
