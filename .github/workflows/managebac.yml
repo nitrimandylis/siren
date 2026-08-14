@@ -74,10 +74,10 @@ jobs:
             git push
           fi
 
-      # A failure here is almost always the session cookie dying, and it lasts
-      # about two weeks, not the year its expires attribute claims. Without this
-      # the only signal is GitHub's failure email. Runs through ntfy.ts so the
-      # topic is still read in exactly one place.
+      # A lapsed session recovers on its own now, so a failure here is either a
+      # rejected login or ManageBac changing shape, and both want a human today
+      # rather than whenever the failure email gets read. Runs through ntfy.ts
+      # so the topic is still read in exactly one place.
       - if: failure()
         env:
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
@@ -86,7 +86,7 @@ jobs:
           bun -e 'import { ping } from "./ntfy";
           await ping({
             title: "managebac sync failed",
-            body: "Usually the session cookie. Refresh ~/.config/managebac/cookie, then gh secret set MANAGEBAC_COOKIE.",
+            body: "Check the run: either the login was rejected or a page changed shape.",
             priority: "high",
             tags: "rotating_light",
             click: process.env.RUN_URL,
