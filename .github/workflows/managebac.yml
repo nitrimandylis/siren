@@ -25,16 +25,6 @@ jobs:
       - uses: oven-sh/setup-bun@v2
       - run: npm install -g @anthropic-ai/claude-code
 
-      # bacpack reads the session from this file and nowhere else, so the
-      # secret is written to disk rather than passed as an env var. printf, not
-      # echo, so nothing lands in the log even before GitHub masks it.
-      - run: |
-          mkdir -p ~/.config/managebac
-          printf '%s' "$MANAGEBAC_COOKIE" > ~/.config/managebac/cookie
-          chmod 600 ~/.config/managebac/cookie
-        env:
-          MANAGEBAC_COOKIE: ${{ secrets.MANAGEBAC_COOKIE }}
-
       # The token lasts a year and its expiry is otherwise silent: the sync
       # falls back to filing untriaged rather than failing. Run the workflow by
       # hand with probe=true to check it without waiting for a teacher to post.
@@ -51,11 +41,19 @@ jobs:
       # #3 and would silently win, sending an X-Api-Key header instead.
       # Classification is best-effort. If the token expires (one year) or the
       # quota is spent, the step still succeeds and posts file untriaged.
+      #
+      # bacpack logs itself in from MANAGEBAC_EMAIL and MANAGEBAC_PASSWORD, so
+      # there is no session cookie to keep alive here. A runner starts with no
+      # cached session, so every run logs in once. The old MANAGEBAC_COOKIE
+      # secret is dead: sessions lapse after about a fortnight and this job
+      # spent two weeks of them failing.
       - run: bun managebac/sync.ts
         env:
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
           NOTION_TOKEN: ${{ secrets.NOTION_API_KEY }}
           MANAGEBAC_SCHOOL: ${{ secrets.MANAGEBAC_SCHOOL }}
+          MANAGEBAC_EMAIL: ${{ secrets.MANAGEBAC_EMAIL }}
+          MANAGEBAC_PASSWORD: ${{ secrets.MANAGEBAC_PASSWORD }}
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
 
       # Only commits when the watermark actually moved. Without this the mark
