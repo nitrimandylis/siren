@@ -7,5 +7,9 @@
   {
     "title": "DUNE",
     "imax": true
+  },
+  {
+    "title": "COYOTE VS. ACME",
+    "cinema": "21"
   }
 ]
