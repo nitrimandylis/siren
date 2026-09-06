@@ -49,7 +49,7 @@ jobs:
       # spent two weeks of them failing.
       - run: bun managebac/sync.ts
         env:
-          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
           NOTION_TOKEN: ${{ secrets.NOTION_API_KEY }}
           MANAGEBAC_SCHOOL: ${{ secrets.MANAGEBAC_SCHOOL }}
           MANAGEBAC_EMAIL: ${{ secrets.MANAGEBAC_EMAIL }}
@@ -76,14 +76,14 @@ jobs:
 
       # A lapsed session recovers on its own now, so a failure here is either a
       # rejected login or ManageBac changing shape, and both want a human today
-      # rather than whenever the failure email gets read. Runs through ntfy.ts
+      # rather than whenever the failure email gets read. Runs through discord.ts
       # so the topic is still read in exactly one place.
       - if: failure()
         env:
-          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
-          bun -e 'import { ping } from "./ntfy";
+          bun -e 'import { ping } from "./discord";
           await ping({
             title: "managebac sync failed",
             body: "Check the run: either the login was rejected or a page changed shape.",

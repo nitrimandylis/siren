@@ -21,7 +21,7 @@
 
 ## 📡 What is this
 
-Some things you only find out by asking again and again: did the tickets drop, did the row get added, did the number move. Siren is where those questions live. Each one is a folder with a script, a GitHub Actions cron on its own schedule, and an [ntfy.sh](https://ntfy.sh) push at the end of it.
+Some things you only find out by asking again and again: did the tickets drop, did the row get added, did the number move. Siren is where those questions live. Each one is a folder with a script, a GitHub Actions cron on its own schedule, and a Discord push at the end of it.
 
 No database, no queue, no plugin system. A watcher is a folder and a workflow file. Adding one is copying a folder.
 
@@ -111,7 +111,7 @@ A post it cannot date still becomes a row with **no Due and no Priority**, which
 
 A dead token looks exactly like Claude reading everything and finding no dates, so the push says which one it was: posts to triage and not one surviving verdict appends `! classifier down, these are untriaged`. The token lasts a year and expires quietly, so the workflow also takes a `probe` input. Run it by hand from the Actions tab with probe on and it asks Claude for one word before touching ManageBac.
 
-There is no session cookie to keep alive. The job passes your login to bacpack, which signs in and caches the session itself, because a ManageBac session dies after about a fortnight whatever the year-long expiry on its cookie says. That fortnight used to be a fortnight of silent failure, so a failed run now pushes to ntfy instead of only sending GitHub's email.
+There is no session cookie to keep alive. The job passes your login to bacpack, which signs in and caches the session itself, because a ManageBac session dies after about a fortnight whatever the year-long expiry on its cookie says. That fortnight used to be a fortnight of silent failure, so a failed run now pushes to Discord instead of only sending GitHub's email.
 
 "New" is one integer in `managebac/seen.txt`, committed back by the workflow. Discussion ids turn out to be a global ascending sequence: all 31 posts sorted by id land in exactly date order. It is a file rather than a lookup against Notion so that deleting a row sticks instead of being undone at 05:23 the next morning, and a first run seeds the mark and files nothing rather than importing the backlog.
 
@@ -137,7 +137,7 @@ To arm it, set these as GitHub Actions secrets:
 
 | secret | used by | what it is |
 |---|---|---|
-| `NTFY_TOPIC` | all | your ntfy topic — pick something unguessable like `odyssey-imax-x7k2f9`, then subscribe to it in the ntfy app |
+| `DISCORD_WEBHOOK` | all | a Discord channel webhook URL — Server Settings → Integrations → Webhooks → New Webhook, then Copy Webhook URL. Anyone holding it can post to that channel, so it lives in Actions secrets and nowhere else |
 | `GH_PAT` | `repos` | classic token with `repo` scope, so private repos are visible |
 | `NOTION_API_KEY` | `repos`, `managebac` | internal integration token, with the database shared to that integration |
 | `MANAGEBAC_SCHOOL` | `managebac` | the subdomain of your school's ManageBac: `acme` for `acme.managebac.com` |
@@ -153,13 +153,13 @@ GitHub disables schedules after 60 days without commits, which is exactly how a 
 flowchart LR
     A[Actions cron<br/>per watcher] --> B[poll the source]
     B --> C[diff against what you want]
-    C -->|something changed| D[ntfy.sh push]
+    C -->|something changed| D[Discord push]
     C -->|nothing yet| E[exit 0, try again next cron]
 ```
 
 | layer | path | job |
 |---|---|---|
-| push | `ntfy.ts` | the one place `NTFY_TOPIC` is read — every watcher sends through it |
+| push | `discord.ts` | the one place `DISCORD_WEBHOOK` is read — every watcher sends through it, posting as SIGIL |
 | http | `retry.ts` | every outbound call goes through it: retries 429 and 5xx so one Cloudflare blip does not fail a run |
 | notion | `notion.ts` | the one place the Notion API version is pinned. `repos` and `managebac` both write through it |
 | watcher | `cinema/`, `f1/`, `repos/`, `managebac/` | one folder each, self-contained, no shared state (f1 keeps one line in `state.txt`) |
@@ -168,7 +168,7 @@ flowchart LR
 | keepalive | `keepalive.ts` | monthly empty commit so github never disables the schedules, plus a "still armed" ping listing every watcher |
 | tests | `*.test.ts`, `*/*.test.ts` | what actually breaks if a parser, the diff, or the markdown breaks |
 
-**Stack:** bun · typescript · github actions · ntfy.sh — no dependencies, the sources' own JSON does all the work
+**Stack:** bun · typescript · github actions · discord — no dependencies, the sources' own JSON does all the work
 
 ---
 

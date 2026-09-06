@@ -28,4 +28,4 @@ jobs:
       # whole thing worked, not just that the job started.
       - run: bun keepalive.ts
         env:
-          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}

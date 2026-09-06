@@ -2,7 +2,7 @@
 // and pings ntfy.sh for every watch that has matches. Silence a watch by
 // deleting its entry (or disable the workflow).
 
-import { ping } from "../ntfy";
+import { ping } from "../discord";
 import { fetchRetry } from "../retry";
 import watches from "./watches.json";
 

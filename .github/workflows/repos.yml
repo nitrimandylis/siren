@@ -13,6 +13,6 @@ jobs:
       - uses: oven-sh/setup-bun@v2
       - run: bun repos/sync.ts
         env:
-          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
           GH_PAT: ${{ secrets.GH_PAT }}
           NOTION_TOKEN: ${{ secrets.NOTION_API_KEY }}

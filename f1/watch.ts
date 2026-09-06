@@ -19,7 +19,7 @@
 
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { ping } from "../ntfy";
+import { ping } from "../discord";
 import { fetchRetry } from "../retry";
 
 const TARGET_YEAR = 2027;

@@ -1,12 +1,12 @@
 # siren
 
 Home for every alert that has to poll something on a schedule. Each watcher is
-a folder, a workflow, and its own cron. Everything ends in an ntfy.sh push to
+a folder, a workflow, and its own cron. Everything ends in a Discord push to
 my phone.
 
 ## Layout
 
-- `ntfy.ts` — shared push helper, the one place `NTFY_TOPIC` is read.
+- `discord.ts` — shared push helper, the one place `DISCORD_WEBHOOK` is read.
 - `notion.ts` — shared Notion client, the one place the API version is pinned.
 - `<watcher>/` — one folder per watcher, self-contained.
 - `.github/workflows/<watcher>.yml` — one workflow per watcher, its own cron.
@@ -29,7 +29,7 @@ an alarm, not a log.
 Cinema ids: 01 Rentis, 03 Pagrati, 21 The Mall Athens (the only IMAX),
 22 Thessaloniki, 23 Volos, 26 Athens Metro Mall, 30 Larissa.
 
-Secrets: `NTFY_TOPIC`.
+Secrets: `DISCORD_WEBHOOK`.
 
 ### `repos` — Notion Coding Projects sync
 
@@ -64,7 +64,7 @@ slow by design — it only happens when a README actually moves.
 The repo is public, so Actions logs are world-readable: the job logs counts
 only, never repo names. Names go to the phone instead.
 
-Secrets: `NTFY_TOPIC`, `GH_PAT` (classic token, `repo` scope, so private repos
+Secrets: `DISCORD_WEBHOOK`, `GH_PAT` (classic token, `repo` scope, so private repos
 are visible), `NOTION_API_KEY` (internal integration with the database shared to
 it). The workflow maps `NOTION_API_KEY` to the `NOTION_TOKEN` env var the script
 reads — GitHub reserves the `GITHUB_` prefix, which is also why the PAT is not
@@ -140,7 +140,7 @@ activates at the moment it would matter. Actions crons also slip 5-20 min under
 load, so this is built to catch the announcement (weeks of warning), not the
 on-sale instant. Set a real alarm from the date it reports.
 
-Secrets: `NTFY_TOPIC`.
+Secrets: `DISCORD_WEBHOOK`.
 
 ### `managebac` — Notion Assignments sync
 
@@ -284,12 +284,12 @@ one of them wants marking Done by hand.
 
 Known ceilings: undated tasks are skipped, since the database sorts on Due and a
 row without one does not surface. A lapsed session is no longer a failure at
-all, because bacpack logs in again; a rejected login is, and it pushes to ntfy
+all, because bacpack logs in again; a rejected login is, and it pushes to Discord
 rather than only emailing. Nothing flows the other
 way — Notion to ManageBac needs a human, because ManageBac has no delete
 endpoint and a retried write double-posts to a real school record.
 
-Secrets: `NTFY_TOPIC`, `NOTION_API_KEY`, `MANAGEBAC_SCHOOL`, `MANAGEBAC_EMAIL`,
+Secrets: `DISCORD_WEBHOOK`, `NOTION_API_KEY`, `MANAGEBAC_SCHOOL`, `MANAGEBAC_EMAIL`,
 `MANAGEBAC_PASSWORD`, and `CLAUDE_CODE_OAUTH_TOKEN` (optional: without it posts
 file untriaged).
 Needs `contents: write` for the watermark.
@@ -314,7 +314,7 @@ which is the thing keepalive exists to make unnecessary.
 Verified 2026-07-31: a push made with the built-in `GITHUB_TOKEN` does reset
 the 60-day clock. No need to check out with `GH_PAT`.
 
-Secrets: `NTFY_TOPIC`.
+Secrets: `DISCORD_WEBHOOK`.
 
 ## History
 

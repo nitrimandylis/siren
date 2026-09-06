@@ -13,4 +13,4 @@ jobs:
       - uses: oven-sh/setup-bun@v2
       - run: bun cinema/watch.ts
         env:
-          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
