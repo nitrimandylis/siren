@@ -35,6 +35,7 @@ export async function ping(push: Push) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       username: "SIGIL",
+      avatar_url: "https://raw.githubusercontent.com/nitrimandylis/sealfetch/main/out/avatar/sigil.png",
       // A muted channel still pushes to the phone for a mention, which is the
       // only thing here that behaves like ntfy's urgent priority.
       content: priority === "urgent" ? "@here" : undefined,
