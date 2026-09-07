@@ -1,7 +1,7 @@
 # siren
 
 Home for every alert that has to poll something on a schedule. Each watcher is
-a folder, a workflow, and its own cron. Everything ends in a Discord push to
+a folder, a workflow, and its own cron. Everything ends in a Discord or ntfy push to
 my phone.
 
 ## Layout
