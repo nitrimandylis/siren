@@ -1,6 +1,8 @@
 // Discord sender. Only push.ts calls this; watchers go through ping() there.
-// Posts as SIGIL, the identity every automation speaks as. Plain text, not an
-// embed: a bold title, the body, the link, and the tags as a subtext line.
+// Posts as SIGIL, the identity every automation speaks as. Markdown, not an
+// embed: a heading, the body as a quote, and one subtext line with the tags
+// and the link. The link is wrapped in <> so Discord does not add a preview
+// card under it, which would bring the block back.
 
 import { fetchRetry } from "./retry";
 import type { Push } from "./push";
@@ -14,9 +16,9 @@ export async function pingDiscord(push: Push) {
     throw new Error("DISCORD_WEBHOOK is not set");
   }
 
-  const lines = [`**${push.title}**`, push.body];
-  if (push.click) lines.push(push.click);
-  if (push.tags) lines.push(`-# ${push.tags}`);
+  const lines = [`### ${push.title}`, ...push.body.split("\n").map((l) => `> ${l}`)];
+  const foot = [push.tags, push.click && `[open](<${push.click}>)`].filter(Boolean);
+  if (foot.length) lines.push(`-# ${foot.join(" · ")}`);
   // A muted channel still pushes to the phone for a mention, which is the
   // only thing here that behaves like ntfy's urgent priority.
   if (push.priority === "urgent") lines.unshift("@here");

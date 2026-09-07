@@ -35,7 +35,7 @@ test("ping posts plain text to the webhook", async () => {
   expect(payload.username).toBe("SIGIL");
   expect(payload.embeds).toBeUndefined();
   // urgent is the only priority that should get through a muted channel.
-  expect(payload.content).toBe("@here\n**MONACO**\nup\nhttps://x.y\n-# checkered_flag");
+  expect(payload.content).toBe("@here\n### MONACO\n> up\n-# checkered_flag · [open](<https://x.y>)");
 });
 
 test("a normal alert does not mention anyone", async () => {
@@ -44,7 +44,7 @@ test("a normal alert does not mention anyone", async () => {
 
   await ping({ title: "Notion", body: "3 new" });
 
-  expect(JSON.parse(seen().init.body).content).toBe("**Notion**\n3 new");
+  expect(JSON.parse(seen().init.body).content).toBe("### Notion\n> 3 new");
 });
 
 // Discord rejects an over-long message with a 400 instead of trimming it,
