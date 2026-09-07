@@ -50,6 +50,7 @@ jobs:
       - run: bun managebac/sync.ts
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
           NOTION_TOKEN: ${{ secrets.NOTION_API_KEY }}
           MANAGEBAC_SCHOOL: ${{ secrets.MANAGEBAC_SCHOOL }}
           MANAGEBAC_EMAIL: ${{ secrets.MANAGEBAC_EMAIL }}
@@ -81,9 +82,10 @@ jobs:
       - if: failure()
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
-          bun -e 'import { ping } from "./discord";
+          bun -e 'import { ping } from "./push";
           await ping({
             title: "managebac sync failed",
             body: "Check the run: either the login was rejected or a page changed shape.",

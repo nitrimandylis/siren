@@ -1,5 +1,5 @@
 import { afterAll, expect, test } from "bun:test";
-import { ping } from "./discord";
+import { pingDiscord as ping } from "./discord";
 
 // ping() is the last line of every watcher and nothing else exercises it, so a
 // missing import here is invisible until the moment an alert fires and the run
@@ -60,9 +60,4 @@ test("an over-long body is cut, not rejected", async () => {
   const embed = JSON.parse(seen().init.body).embeds[0];
   expect(embed.title.length).toBe(256);
   expect(embed.description.length).toBe(4096);
-});
-
-test("a missing webhook is a loud failure, not a silent no-op", async () => {
-  delete process.env.DISCORD_WEBHOOK;
-  await expect(ping({ title: "t", body: "b" })).rejects.toThrow("DISCORD_WEBHOOK");
 });

@@ -12,7 +12,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { listClasses } from "../bacpack/src/client.ts";
 import { listDiscussions, type Discussion } from "../bacpack/src/classes.ts";
 import { fetchTasks, type Task } from "../bacpack/src/due.ts";
-import { ping } from "../discord";
+import { ping } from "../push";
 import { notion } from "../notion";
 import { classify, type Verdict } from "./classify.ts";
 

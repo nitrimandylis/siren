@@ -5,7 +5,7 @@
 
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { ping } from "./discord";
+import { ping } from "./push";
 import watches from "./cinema/watches.json";
 import type { Watch } from "./cinema/watch";
 

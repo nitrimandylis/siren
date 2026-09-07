@@ -21,7 +21,7 @@
 
 ## 📡 What is this
 
-Some things you only find out by asking again and again: did the tickets drop, did the row get added, did the number move. Siren is where those questions live. Each one is a folder with a script, a GitHub Actions cron on its own schedule, and a Discord push at the end of it.
+Some things you only find out by asking again and again: did the tickets drop, did the row get added, did the number move. Siren is where those questions live. Each one is a folder with a script, a GitHub Actions cron on its own schedule, and a Discord or ntfy push at the end of it.
 
 No database, no queue, no plugin system. A watcher is a folder and a workflow file. Adding one is copying a folder.
 
@@ -138,6 +138,7 @@ To arm it, set these as GitHub Actions secrets:
 | secret | used by | what it is |
 |---|---|---|
 | `DISCORD_WEBHOOK` | all | a Discord channel webhook URL — Server Settings → Integrations → Webhooks → New Webhook, then Copy Webhook URL. Anyone holding it can post to that channel, so it lives in Actions secrets and nowhere else |
+| `NTFY_TOPIC` | all | an [ntfy.sh](https://ntfy.sh) topic — pick something unguessable like `odyssey-imax-x7k2f9`, then subscribe to it in the ntfy app. Set one of the two, or both, and every alert goes to whichever is set |
 | `GH_PAT` | `repos` | classic token with `repo` scope, so private repos are visible |
 | `NOTION_API_KEY` | `repos`, `managebac` | internal integration token, with the database shared to that integration |
 | `MANAGEBAC_SCHOOL` | `managebac` | the subdomain of your school's ManageBac: `acme` for `acme.managebac.com` |
@@ -159,7 +160,7 @@ flowchart LR
 
 | layer | path | job |
 |---|---|---|
-| push | `discord.ts` | the one place `DISCORD_WEBHOOK` is read — every watcher sends through it, posting as SIGIL |
+| push | `push.ts` | the one place the transport is chosen: every watcher sends through it, to `discord.ts` (posting as SIGIL) if `DISCORD_WEBHOOK` is set, to `ntfy.ts` if `NTFY_TOPIC` is set, both if both are |
 | http | `retry.ts` | every outbound call goes through it: retries 429 and 5xx so one Cloudflare blip does not fail a run |
 | notion | `notion.ts` | the one place the Notion API version is pinned. `repos` and `managebac` both write through it |
 | watcher | `cinema/`, `f1/`, `repos/`, `managebac/` | one folder each, self-contained, no shared state (f1 keeps one line in `state.txt`) |
@@ -168,7 +169,7 @@ flowchart LR
 | keepalive | `keepalive.ts` | monthly empty commit so github never disables the schedules, plus a "still armed" ping listing every watcher |
 | tests | `*.test.ts`, `*/*.test.ts` | what actually breaks if a parser, the diff, or the markdown breaks |
 
-**Stack:** bun · typescript · github actions · discord — no dependencies, the sources' own JSON does all the work
+**Stack:** bun · typescript · github actions · discord or ntfy.sh — no dependencies, the sources' own JSON does all the work
 
 ---
 

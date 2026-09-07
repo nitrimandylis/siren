@@ -5,7 +5,7 @@
 // Needs GH_PAT (classic token, `repo` scope, so private repos are visible) and
 // NOTION_TOKEN (internal integration with the database shared to it).
 
-import { ping } from "../discord";
+import { ping } from "../push";
 import { fetchRetry } from "../retry";
 import { notion } from "../notion";
 import { toBlocks } from "./markdown";

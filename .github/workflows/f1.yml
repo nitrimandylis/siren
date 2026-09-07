@@ -17,6 +17,7 @@ jobs:
       - run: bun f1/watch.ts
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
       # Only commits when the phase actually changed, so a quiet week leaves no
       # trace. The rebase is for the rare collision with keepalive's push.
       - run: |

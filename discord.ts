@@ -1,16 +1,8 @@
-// Shared push helper. Every watcher sends its alerts through here so the
-// webhook is read from the environment in exactly one place. Posts as SIGIL,
-// the identity every automation speaks as.
+// Discord sender. Only push.ts calls this; watchers go through ping() there.
+// Posts as SIGIL, the identity every automation speaks as.
 
 import { fetchRetry } from "./retry";
-
-export type Push = {
-  title: string;
-  body: string;
-  priority?: "default" | "high" | "urgent";
-  tags?: string; // free text, rendered as the embed footer
-  click?: string; // URL the embed title links to
-};
+import type { Push } from "./push";
 
 // Discord truncates nothing: it answers 400 and the run fails. Cut instead.
 const TITLE_MAX = 256;
@@ -22,7 +14,7 @@ const COLOURS = {
   urgent: 0xed4245,
 };
 
-export async function ping(push: Push) {
+export async function pingDiscord(push: Push) {
   const webhook = process.env.DISCORD_WEBHOOK;
   if (!webhook) {
     throw new Error("DISCORD_WEBHOOK is not set");

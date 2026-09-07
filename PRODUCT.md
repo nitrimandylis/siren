@@ -6,7 +6,7 @@ my phone.
 
 ## Layout
 
-- `discord.ts` — shared push helper, the one place `DISCORD_WEBHOOK` is read.
+- `push.ts` — shared push helper, the one place the transport is chosen: `discord.ts` if `DISCORD_WEBHOOK` is set, `ntfy.ts` if `NTFY_TOPIC` is set, both if both are.
 - `notion.ts` — shared Notion client, the one place the API version is pinned.
 - `<watcher>/` — one folder per watcher, self-contained.
 - `.github/workflows/<watcher>.yml` — one workflow per watcher, its own cron.
@@ -29,7 +29,7 @@ an alarm, not a log.
 Cinema ids: 01 Rentis, 03 Pagrati, 21 The Mall Athens (the only IMAX),
 22 Thessaloniki, 23 Volos, 26 Athens Metro Mall, 30 Larissa.
 
-Secrets: `DISCORD_WEBHOOK`.
+Secrets: `DISCORD_WEBHOOK` and/or `NTFY_TOPIC`.
 
 ### `repos` — Notion Coding Projects sync
 
@@ -64,7 +64,7 @@ slow by design — it only happens when a README actually moves.
 The repo is public, so Actions logs are world-readable: the job logs counts
 only, never repo names. Names go to the phone instead.
 
-Secrets: `DISCORD_WEBHOOK`, `GH_PAT` (classic token, `repo` scope, so private repos
+Secrets: `DISCORD_WEBHOOK` and/or `NTFY_TOPIC`, `GH_PAT` (classic token, `repo` scope, so private repos
 are visible), `NOTION_API_KEY` (internal integration with the database shared to
 it). The workflow maps `NOTION_API_KEY` to the `NOTION_TOKEN` env var the script
 reads — GitHub reserves the `GITHUB_` prefix, which is also why the PAT is not
@@ -140,7 +140,7 @@ activates at the moment it would matter. Actions crons also slip 5-20 min under
 load, so this is built to catch the announcement (weeks of warning), not the
 on-sale instant. Set a real alarm from the date it reports.
 
-Secrets: `DISCORD_WEBHOOK`.
+Secrets: `DISCORD_WEBHOOK` and/or `NTFY_TOPIC`.
 
 ### `managebac` — Notion Assignments sync
 
@@ -289,7 +289,7 @@ rather than only emailing. Nothing flows the other
 way — Notion to ManageBac needs a human, because ManageBac has no delete
 endpoint and a retried write double-posts to a real school record.
 
-Secrets: `DISCORD_WEBHOOK`, `NOTION_API_KEY`, `MANAGEBAC_SCHOOL`, `MANAGEBAC_EMAIL`,
+Secrets: `DISCORD_WEBHOOK` and/or `NTFY_TOPIC`, `NOTION_API_KEY`, `MANAGEBAC_SCHOOL`, `MANAGEBAC_EMAIL`,
 `MANAGEBAC_PASSWORD`, and `CLAUDE_CODE_OAUTH_TOKEN` (optional: without it posts
 file untriaged).
 Needs `contents: write` for the watermark.
@@ -314,7 +314,7 @@ which is the thing keepalive exists to make unnecessary.
 Verified 2026-07-31: a push made with the built-in `GITHUB_TOKEN` does reset
 the 60-day clock. No need to check out with `GH_PAT`.
 
-Secrets: `DISCORD_WEBHOOK`.
+Secrets: `DISCORD_WEBHOOK` and/or `NTFY_TOPIC`.
 
 ## History
 
