@@ -32,7 +32,7 @@ test("ping posts plain text to the webhook", async () => {
   const { url, init } = seen();
   const payload = JSON.parse(init.body);
   expect(url).toBe(WEBHOOK);
-  expect(payload.username).toBe("SIGIL");
+  expect(payload.username).toBeUndefined();
   expect(payload.embeds).toBeUndefined();
   // urgent is the only priority that should get through a muted channel.
   expect(payload.content).toBe("@here\n### MONACO\n> up\n-# checkered_flag · [open](<https://x.y>)");

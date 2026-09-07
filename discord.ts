@@ -1,5 +1,6 @@
 // Discord sender. Only push.ts calls this; watchers go through ping() there.
-// Posts as SIGIL, the identity every automation speaks as. Markdown, not an
+// Name and avatar come from the webhook's own settings in Discord, so the
+// payload sets neither. Markdown, not an
 // embed: a heading, the body as a quote, and one subtext line with the tags
 // and the link. The link is wrapped in <> so Discord does not add a preview
 // card under it, which would bring the block back.
@@ -27,7 +28,6 @@ export async function pingDiscord(push: Push) {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      username: "SIGIL",
       content: lines.join("\n").slice(0, CONTENT_MAX),
       allowed_mentions: { parse: ["everyone"] },
     }),

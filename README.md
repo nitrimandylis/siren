@@ -160,7 +160,7 @@ flowchart LR
 
 | layer | path | job |
 |---|---|---|
-| push | `push.ts` | the one place the transport is chosen: every watcher sends through it, to `discord.ts` (posting as SIGIL) if `DISCORD_WEBHOOK` is set, to `ntfy.ts` if `NTFY_TOPIC` is set, both if both are |
+| push | `push.ts` | the one place the transport is chosen: every watcher sends through it, to `discord.ts` if `DISCORD_WEBHOOK` is set, to `ntfy.ts` if `NTFY_TOPIC` is set, both if both are |
 | http | `retry.ts` | every outbound call goes through it: retries 429 and 5xx so one Cloudflare blip does not fail a run |
 | notion | `notion.ts` | the one place the Notion API version is pinned. `repos` and `managebac` both write through it |
 | watcher | `cinema/`, `f1/`, `repos/`, `managebac/` | one folder each, self-contained, no shared state (f1 keeps one line in `state.txt`) |
