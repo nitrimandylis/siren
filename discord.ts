@@ -1,18 +1,12 @@
 // Discord sender. Only push.ts calls this; watchers go through ping() there.
-// Posts as SIGIL, the identity every automation speaks as.
+// Posts as SIGIL, the identity every automation speaks as. Plain text, not an
+// embed: a bold title, the body, the link, and the tags as a subtext line.
 
 import { fetchRetry } from "./retry";
 import type { Push } from "./push";
 
 // Discord truncates nothing: it answers 400 and the run fails. Cut instead.
-const TITLE_MAX = 256;
-const BODY_MAX = 4096;
-
-const COLOURS = {
-  default: 0x5865f2,
-  high: 0xf5a623,
-  urgent: 0xed4245,
-};
+const CONTENT_MAX = 2000;
 
 export async function pingDiscord(push: Push) {
   const webhook = process.env.DISCORD_WEBHOOK;
@@ -20,26 +14,20 @@ export async function pingDiscord(push: Push) {
     throw new Error("DISCORD_WEBHOOK is not set");
   }
 
-  const priority = push.priority ?? "default";
+  const lines = [`**${push.title}**`, push.body];
+  if (push.click) lines.push(push.click);
+  if (push.tags) lines.push(`-# ${push.tags}`);
+  // A muted channel still pushes to the phone for a mention, which is the
+  // only thing here that behaves like ntfy's urgent priority.
+  if (push.priority === "urgent") lines.unshift("@here");
 
   const response = await fetchRetry(webhook, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       username: "SIGIL",
-      // A muted channel still pushes to the phone for a mention, which is the
-      // only thing here that behaves like ntfy's urgent priority.
-      content: priority === "urgent" ? "@here" : undefined,
+      content: lines.join("\n").slice(0, CONTENT_MAX),
       allowed_mentions: { parse: ["everyone"] },
-      embeds: [
-        {
-          title: push.title.slice(0, TITLE_MAX),
-          description: push.body.slice(0, BODY_MAX),
-          url: push.click,
-          color: COLOURS[priority],
-          footer: push.tags ? { text: push.tags } : undefined,
-        },
-      ],
     }),
   });
   if (!response.ok) {

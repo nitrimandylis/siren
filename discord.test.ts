@@ -23,21 +23,19 @@ function capture() {
   return () => seen!;
 }
 
-test("ping posts an embed to the webhook", async () => {
+test("ping posts plain text to the webhook", async () => {
   process.env.DISCORD_WEBHOOK = WEBHOOK;
   const seen = capture();
 
-  await ping({ title: "MONACO", body: "up", priority: "urgent", tags: "checkered_flag" });
+  await ping({ title: "MONACO", body: "up", priority: "urgent", tags: "checkered_flag", click: "https://x.y" });
 
   const { url, init } = seen();
   const payload = JSON.parse(init.body);
   expect(url).toBe(WEBHOOK);
   expect(payload.username).toBe("SIGIL");
-  expect(payload.embeds[0].title).toBe("MONACO");
-  expect(payload.embeds[0].description).toBe("up");
-  expect(payload.embeds[0].footer.text).toBe("checkered_flag");
+  expect(payload.embeds).toBeUndefined();
   // urgent is the only priority that should get through a muted channel.
-  expect(payload.content).toBe("@here");
+  expect(payload.content).toBe("@here\n**MONACO**\nup\nhttps://x.y\n-# checkered_flag");
 });
 
 test("a normal alert does not mention anyone", async () => {
@@ -46,18 +44,16 @@ test("a normal alert does not mention anyone", async () => {
 
   await ping({ title: "Notion", body: "3 new" });
 
-  expect(JSON.parse(seen().init.body).content).toBeUndefined();
+  expect(JSON.parse(seen().init.body).content).toBe("**Notion**\n3 new");
 });
 
-// Discord rejects an over-long embed with a 400 instead of trimming it, which
-// would turn a big cinema alert into a failed run.
-test("an over-long body is cut, not rejected", async () => {
+// Discord rejects an over-long message with a 400 instead of trimming it,
+// which would turn a big cinema alert into a failed run.
+test("an over-long message is cut, not rejected", async () => {
   process.env.DISCORD_WEBHOOK = WEBHOOK;
   const seen = capture();
 
   await ping({ title: "x".repeat(300), body: "y".repeat(5000) });
 
-  const embed = JSON.parse(seen().init.body).embeds[0];
-  expect(embed.title.length).toBe(256);
-  expect(embed.description.length).toBe(4096);
+  expect(JSON.parse(seen().init.body).content.length).toBe(2000);
 });
