@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <rect width="512" height="512" fill="#0D0D10"/>
+  <!-- beam -->
+  <g fill="#D97757">
+    <polygon points="256,132 56,66 56,198" opacity="0.35"/>
+    <polygon points="256,132 456,66 456,198" opacity="0.35"/>
+    <polygon points="256,132 56,104 56,160" opacity="0.6"/>
+    <polygon points="256,132 456,104 456,160" opacity="0.6"/>
+  </g>
+  <!-- rock -->
+  <path d="M132 440 L196 396 L256 384 L316 396 L380 440 Z" fill="#F5D9CB" opacity="0.3"/>
+  <!-- tower -->
+  <polygon points="196,404 316,404 294,190 218,190" fill="#F5D9CB"/>
+  <!-- bands -->
+  <polygon points="210,268 302,268 305,300 207,300" fill="#0D0D10"/>
+  <polygon points="203,338 309,338 312,370 200,370" fill="#0D0D10"/>
+  <!-- gallery -->
+  <rect x="200" y="176" width="112" height="16" rx="5" fill="#F5D9CB"/>
+  <!-- lantern room -->
+  <rect x="226" y="120" width="60" height="56" fill="#D97757"/>
+  <rect x="216" y="110" width="80" height="12" rx="4" fill="#F5D9CB"/>
+  <!-- dome -->
+  <path d="M222 110 A34 34 0 0 1 290 110 Z" fill="#F5D9CB"/>
+  <circle cx="256" cy="70" r="7" fill="#F5D9CB"/>
+</svg>
